@@ -11,7 +11,7 @@ from publicsuffix import PublicSuffixList
 from django.contrib.auth.models import User
 from netfields import CidrAddressField, NetManager
 import csv
-import routergeoloc.geoutils
+import openipmap.geoutils
 #import logging
 #logging.basicConfig(filename='/tmp/emile.debug.log',level=logging.DEBUG)
 

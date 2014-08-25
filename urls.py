@@ -1,7 +1,7 @@
 from django.conf.urls import patterns, url, include
 from rest_framework import routers
 #from rest_framework_nested import routers
-from routergeoloc import views
+from openipmap import views
 
 router = routers.SimpleRouter()
 router.register(r'domain_regex_rules', views.DomainRegexRuleViewSet)

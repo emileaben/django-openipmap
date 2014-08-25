@@ -1,8 +1,8 @@
 import unicodedata
 import re
 import ipaddress
-from routergeoloc.models import Loc,Geoalias,IPMeta,Probe
-import routergeoloc.geoutils
+from openipmap.models import Loc,Geoalias,IPMeta,Probe
+import openipmap.geoutils
 
 #import logging
 #logging.basicConfig(filename='/tmp/debug.log',level=logging.DEBUG)

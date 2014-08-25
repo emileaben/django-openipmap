@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from routergeoloc.models import *
+from openipmap.models import *
 
 class UserField(serializers.RelatedField):
     def to_native(self, value):
