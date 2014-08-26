@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import gzip
 from django.core.management.base import BaseCommand, CommandError
-from routergeoloc.models import Loc,Geoalias
+from openipmap.models import Loc,Geoalias
 import re
 import csv
 from StringIO import StringIO

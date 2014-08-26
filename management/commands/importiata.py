@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import csv
 from django.core.management.base import BaseCommand, CommandError
-from routergeoloc.models import Loc,Geoalias
+from openipmap.models import Loc,Geoalias
 import re
 import urllib
 

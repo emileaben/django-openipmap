@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from django.core.management.base import BaseCommand, CommandError
-from routergeoloc.models import Loc,Geoalias
+from openipmap.models import Loc,Geoalias
 import re
 ## from collections import Counter ### python 2.6 ugh
 

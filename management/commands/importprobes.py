@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from django.core.management.base import BaseCommand, CommandError
-from routergeoloc.models import Probe
+from openipmap.models import Probe
 import urllib2
 import simplejson
 
