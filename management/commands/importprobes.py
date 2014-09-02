@@ -26,7 +26,7 @@ def parse_probe_json( batch ):
         p.lon = lon
         p.point = geo_spec
       p.save()
-      print "XX %s" % ( prb_info )
+##      print "XX %s" % ( prb_info )
 
 class Command(BaseCommand):
    args = ''
