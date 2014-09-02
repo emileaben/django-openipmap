@@ -1,0 +1,217 @@
+### this data was extracted from peeringdb 
+#clli	city	state	country
+ \tTORO	Toronto	On	CA
+ALBYNY	Albany	NY	US
+AMSTNL	Amsterdam	NULL	NL
+AMSTNL	Amsterdam	AS	NL
+AMSTNL	Amsterdam	NULL	NL
+AMSTNL	Amsterdam	NULL	NL
+AMSTNL	Amsterdam	NULL	NL
+AMSTNL	Amsterdam	NULL	NL
+AMSTNL	Amsterdam	NULL	NL
+AMSTNL	Amsterdam	NULL	NL
+AMSTNL	Amsterdam	NULL	NL
+AMSTNL	Hilversum	NH	NL
+AMSTNL	Amsterdam	NULL	NL
+AMSTNL	Amsterdam	NULL	NL
+AMSTNL	Amsterdam	NULL	NL
+AMSTNL	Amsterdam	NULL	NL
+AMSTNL	Amsterdam	NULL	NL
+AMSTNL	Amsterdam	NULL	NL
+AMSTNL	Amsterdam	NULL	NL
+AMSTNL	Amsterdam	NULL	NL
+AMSTNL	Amsterdam	NULL	NL
+AMSTNL	Amsterdam	NULL	NL
+ASBNVA	Ashburn	VA	US
+ASBNVA	Ashburn	VA	US
+ATLNGA	Atlanta	GA	US
+ATLNGA	Atlanta	GA	US
+ATLNGA	Atlanta	GA	US
+ATLNGA	Atlanta	GA	US
+ATLNGA	Atlanta	GA	US
+BLASHO	Cincinnati 	OH	US
+BLASHO	Cincinnati 	OH	US
+BLASOH	Cincinnati 	OH	US
+BLLVNE	Bellevue	NE	US
+BOITID	Boise	ID	US
+BRLNGE	Berlin	DE	DE
+BRWDNY	Brentwood	NY	US
+BSTNMA	Boston	MA	US
+BUCHRO	Bucharest	NULL	RO
+BUCHRO	Bucharest	NULL	RO
+BUCHRO	Bucharest	NULL	RO
+BUCHRO	Bucharest	NULL	RO
+CALGAR	Calgary	AB	CA
+CALGAR	Calgary	AB	CA
+CDFLIA	Cedar Falls	IA	US
+CHCGIL	Chicago	IL	US
+CHCGIL	Chicago	IL	US
+CLEVOH	Cleveland	OH	US
+CLMBOH	Columbus	OH	US
+CLMCOH	Columbus	OH	US
+CNCNOH	Cincinnati 	OH	US
+DLLSTX	Dallas	TX	US
+DLLSTX	Dallas	TX	US
+DLLSTX	Dallas	TX	US
+DLLSTX	Dallas	TX	US
+EDTNAB	Edmonton	AB	1
+EGFKMN	East Grand Forks	MN	US
+EQTKJP	Tokyo	NULL	JP
+FLRNKY	Florence	KY	US
+FRNKGE	Frankfurt	NULL	DE
+FRNKGE	Frankfurt	NULL	DE
+FRNKGE	Frankfurt	NULL	DE
+FRNKGE	Frankfurt	NULL	DE
+FRNKGE	Frankfurt	NULL	DE
+FRNKGE	Frankfurt	NULL	DE
+FRNKGE	Frankfurt	NULL	DE
+FRNKGE	Frankfurt	NULL	DE
+FRNKGE	Frankfurt	NULL	DE
+FRNKGE	Frankfurt	NULL	DE
+FRNKGE	Frankfurt	NULL	DE
+FRNKGE	Frankfurt	NULL	DE
+FRNKGE	Frankfurt	NULL	DE
+FRNKGE	Frankfurt	NULL	DE
+FRNKGE	Frankfurt	NULL	DE
+FRNKGE	Frankfurt	NULL	DE
+FRNKGE	Frankfurt	NULL	DE
+FRNKGE	Frankfurt	NULL	DE
+FRNKGE	Frankfurt	NULL	DE
+GRCYNY	Garden City	NY	US
+GRCYNY	Garden City	NY	US
+HMTNOH	Hamilton	OH	US
+HSTNJA	Houston	TX	US
+iplswn	Indianapolis	IN	US
+IPLVIN	Indianapolis	IN	US
+IPLXIN	Indianapolis	IN	US
+JCVLFL	Jacksonville	FL	US
+JCVNFL	Jacksonville	FL	US
+JRCYNJ	Jersey City	NJ	US
+JRCYNJ	Jersey City	NJ	US
+KNVLTN	Knoxville	TN	US
+KSCYMO	Kansas City	MO	US
+LBNNOH	Lebanon	OH	US
+LENRNC	Lenoir	NC	US
+LONDEN	Slough	NULL	UK
+LONDEN	London	NULL	UK
+LONDEN	London	NULL	UK
+LONDEN	LONDON	NULL	UK
+LONDEN	Slough	NULL	UK
+LONDEN	London	NULL	UK
+LONDEN	London	NULL	UK
+LONDEN	London	NULL	GB
+LONDEN	London	NULL	UK
+LONDEN	West Drayton	NULL	UK
+LONDEN	London	NULL	UK
+LONDEN	London	NULL	UK
+LONDEN	London	NULL	UK
+LONDEN	London	NULL	UK
+LONDEN	London	NULL	UK
+LONDEN	London	NULL	UK
+LONDEN	London	NULL	UK
+LONDEN	London	NULL	UK
+LONDEN	London	NULL	UK
+LONDEN	London	NULL	UK
+LONDEN	London	NULL	UK
+LONDEN	London	NULL	UK
+LONDEN	London	NULL	UK
+LONDEN	London	NULL	UK
+LONDEN	London	NULL	UK
+LONDEN	London	NULL	UK
+LSANCA	Los Angeles	CA	US
+LSANCA	Los Angeles	CA	US
+LSANCA	Los Angeles	CA	US
+LSANCA	Los Angeles	CA	US
+LSANCA	Los Angeles	CA	US
+LSANCA	Los Angeles	CA	US
+LSANCA	Los Angeles	CA	US
+LSANCA	Los Angeles	CA	US
+LSANCA	Los Angeles	CA	US
+MASNOH	Mason	OH	US
+MDSNWI	Madison	wi	US
+MDSNWI	Madison	WI	US
+MDSTCA	Modesto	CA	US
+MIAMFL	Boca Raton	FL	US
+MIASFL	Miami	FL	US
+MIAUFL	Miami	FL	US
+MILWWI	Milwaukee	WI	US
+MNCHNH	Manchester	NH	US
+MTRLPQ	Montreal	QC	CA
+MTRLPQ	Montreal	QC	CA
+NBRGNJ	North Bergen	NJ	US
+NWRKNJ	Newark	NJ	US
+NWRKNJ	Newark	NJ	US
+NWRKNJ	Newark	NJ	US
+NYCMNY	New York	NY	US
+NYCMNY	New York	NY	US
+NYCMNY	New York	NY	US
+NYCMNY	New York	NY	US
+NYCMNY	New York	NY	US
+NYCMNY	New York	NY	US
+NYCMNY	New York	NY	US
+NYCMNY	New York	NY	US
+NYCMNY	New York	NY	US
+NYCMNY	New York	NY	US
+NYCMNY	New York	NY	US
+NYCMNY	New York	NY	US
+NYCMNY	New York	NY	US
+NYCMNY	New York	NY	US
+NYCMNY	New York	NY	US
+NYCRNY	Staten Island	NY	US
+OMAHNE	Omaha	NE	US
+PARSFR	Paris	NULL	FR
+PARSFR	Paris	NULL	FR
+PARSFR	Paris	NULL	FR
+PARSFR	Magny-les-Hameaux	NULL	FR
+PARSFR	Paris	NULL	FR
+PARSFR	Paris	NULL	FR
+PARSFR	Paris	NULL	FR
+PARSFR	Paris	NULL	FR
+PARSFR	Paris	NULL	FR
+PHNXAZ	Phoenix	AZ	US
+PITBPA	Pittsburgh	PA	US
+PLALCA	Palo Alto	CA	US
+PLBGNY	Plattsburgh	NY	US
+PMBHFL	Deerfield	FL	1
+PROFIS	Bucharest	NULL	RO
+SCCSNJ	Secaucus	NJ	US
+SKTPCA	Stockton	CA	US
+SMTWNY	Nesconset	NY	US
+SNFCCA	San Francisco	CA	US
+SNFCCA	San Francisco	CA	US
+SNFCCA	San Francisco	CA	US
+SNFCCA	San Francisco	CA	US
+SNFCCA	San Francisco	CA	US
+SNFCCA	San Francisco	CA	US
+SNJSCA	San Jose	CA	US
+SNJSCA	San Jose	CA	US
+SNJSCA	San Jose	CA	US
+SNJSCA	San Jose	CA	US
+SNJSCA	San Jose	CA	US
+SNTCCA	Santa Clara	CA	US
+SNTCCA	Santa Clara	CA	US
+SNTCCA	Santa Clara	CA	US
+SNVACA	Sunnyvale	CA	US
+SNVACA	Sunnyvale	CA	US
+SNVBCA	Sunnyvale	Ca	US
+STLSMO	St. Louis	MO	US
+STTLWA	Seattle	WA	US
+STTLWA	Seattle	WA	US
+STTLWA	Seattle	WA	US
+STTLWA	Seattle	WA	US
+STTLWA	Seattle	WA	US
+SYDNAU	Mascot (Sydney) NSW	NULL	AU
+SYDNAU	Alexandria NSW	NULL	AU
+SYRCNY	Syracuse	NY	US
+TAMQFL	Tampa	FL	US
+TOROON	Toronto	NULL	CA
+TOROON	Toronto	ON	CA
+TOROON	Toronto	ON	CA
+VANCBC	Vancouver	BC	CA
+VINNVA	Vienna	VA	US
+VINNVA	Vienna	VA	US
+WHWKNJ	Weehawken	NJ	US
+WKFDMA	Wakefield	MA	US
+WNPJMB	Winnipeg	MB	CA
+WOTNOH	Worthington	OH	US
+WTTWNY	Watertown	NY	US

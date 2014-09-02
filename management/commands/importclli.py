@@ -20,7 +20,8 @@ class Command(BaseCommand):
       Geoalias.objects.filter(kind__exact='clli').delete()
       count=0
       cllis={}
-      with open('./routergeoloc/data/cllis.txt', 'rb') as f:
+      with open('./openipmap/data/cllis.txt', 'rb') as f:
+         f.readline() ## remove header
          f.readline() ## remove header
          for line in f:
 #            CLEVOH   Cleveland   OH US
