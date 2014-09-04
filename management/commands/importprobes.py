@@ -4,8 +4,8 @@ from openipmap.models import Probe
 import urllib2
 import simplejson
 
-#ATLAS_URL = 'https://atlas.ripe.net/'
-ATLAS_URL = 'https://193.0.6.158/'
+ATLAS_URL = 'https://atlas.ripe.net/'
+#ATLAS_URL = 'https://193.0.6.158/'
 
 
 def parse_probe_json( batch ):
@@ -42,6 +42,7 @@ class Command(BaseCommand):
       while True:
          if not 'meta' in probe_data_batch: break
          if not 'next' in probe_data_batch['meta']: break
+         if probe_data_batch['meta']['next'] is None: break
          next_url = "%s%s" % ( ATLAS_URL , probe_data_batch['meta']['next'])
          next_req = urllib2.Request( next_url )
          next_req.add_header("Content-Type", "application/json")
