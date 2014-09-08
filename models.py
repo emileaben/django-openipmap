@@ -119,7 +119,7 @@ class HostnameRule( Contribution ):
 
     def save( self, *args, **kwargs ):
         if self.georesult:
-            loc = routergeoloc.geoutils.loc_resolve( self.georesult )
+            loc = openipmap.geoutils.loc_resolve( self.georesult )
             if loc and loc.raw['lat'] and loc.raw['lng']:
                 self.lat = loc.raw['lat']
                 self.lon = loc.raw['lng']
@@ -173,7 +173,7 @@ class IPRule( Contribution ):
 
     def save( self, *args, **kwargs ):
         if self.georesult:
-            loc = routergeoloc.geoutils.loc_resolve( self.georesult )
+            loc = openipmap.geoutils.loc_resolve( self.georesult )
             if loc and loc.raw['lat'] and loc.raw['lng']:
                 self.lat = loc.raw['lat']
                 self.lon = loc.raw['lng']
@@ -425,7 +425,7 @@ class IPMeta(models.Model):
                 sql_like_chars = '%%'.join( list( t ) )
                 sql_like_chars += '%%'
                 # 'a%m%s%'
-                sql = "SELECT id FROM routergeoloc_geoalias WHERE word LIKE '%s'" % ( sql_like_chars )
+                sql = "SELECT id FROM openipmap_geoalias WHERE word LIKE '%s'" % ( sql_like_chars )
                 for ga in Geoalias.objects.raw( sql ):
                     add_to_matches( ga, t, True )
         mk = sorted( matches.keys(), reverse=True, key=lambda x: matches[x]['pop'] )[0:nr_results] ## max 10
