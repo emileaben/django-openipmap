@@ -1,0 +1,26 @@
+<h2>Bulk Upload</h2>
+
+This form allows for uploading csv files with IP prefixes and hostnames to geolocation information.
+<br>
+Fields:
+<ul>
+ <li>Hostname or IP prefix</li>
+ <li>Geolocatable string</li>
+ <li>Confidence (0-100)</li>
+</ul>
+
+Example:
+<pre>
+akamai-ic-151990-s-akix-i1.c.telia.net,"Stockholm,SE",85
+193.0.0.0/21,"Amsterdam,NL",85
+</pre>
+
+
+<form enctype="multipart/form-data" method="post" action=".">
+ {% csrf_token %}
+ <table>
+  {{form.as_table}}
+ </table>
+<input type="submit" value="Submit" id="Save"/>
+</form>
+

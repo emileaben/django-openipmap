@@ -1,0 +1,1524 @@
+ <!DOCTYPE html>
+<html>
+<head>
+ <meta charset="utf-8">
+ <!--
+ <script src="//code.jquery.com/jquery-1.10.2.js"></script>
+ <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js'></script>
+ <script src="//code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
+
+ <link rel="stylesheet" href="//code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css">
+ <script src="//code.jquery.com/jquery-1.10.2.js"></script>
+ <script src="//code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
+ -->
+
+   <script src="//code.jquery.com/jquery-1.10.2.js"></script>
+   <script src="//code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
+
+
+<!-- TODO local versions of these? -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.6.0/underscore-min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.1.2/backbone-min.js"></script>
+<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.form/3.49/jquery.form.min.js"></script> -->
+
+ <script src="/static/leaflet.js"></script>
+ <link rel="stylesheet" href="/static/leaflet.css" />
+
+ <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+ <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-hover-dropdown/2.0.2/bootstrap-hover-dropdown.js"></script> -->
+ <link rel="stylesheet" href="//code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css">
+
+<style>
+
+
+form { margin:0px;}
+input { margin: 0px;}
+
+.trace-table {
+    white-space: nowrap;
+}
+
+.ui-dialog .ui-dialog-content {
+    padding: 0px;
+    z-index: 2;
+}
+
+.navbar {
+    margin-bottom: 0px;
+}
+
+.dropdown-menu {
+    z-index: 1;
+}
+
+.leaflet-top {
+    margin-top: 50px;
+}
+
+.ip-loc-option-crowd {
+    background-color: green;
+}
+
+.ip-loc-option-guess {
+    background-color: red;
+}
+
+
+html, body, #map {
+      height:100%;
+      width:100%;
+      margin:0px;
+}
+
+table,td,th {
+    border: 1px solid #ddd;
+    border-collapse:collapse;
+}
+
+#trace_info {
+   position:absolute;
+   top:0;
+   right:0;
+   background: #ddd;
+}
+
+.name-icon {
+    background: #f00;
+    text-align:center;
+    vertical-align:middle;
+    border:1px solid #000;
+    border-radius:20px;
+    line-height:40px;
+}
+
+.dnsloc-icon {
+    background: #00f;
+    text-align:center;
+    vertical-align:middle;
+    border:1px solid #000;
+    border-radius:20px;
+    line-height:40px;
+}
+
+.area-icon {
+    background: #33f;
+    text-align:center;
+    vertical-align:middle;
+    border:1px solid #000;
+    border-radius:20px;
+    line-height:40px;
+}
+
+.prb-icon {
+    background: #fff;
+    text-align:center;
+    vertical-align:middle;
+    border:1px solid #000;
+    border-radius:20px;
+    line-height:40px;
+    z-index: 1;
+}
+
+.crowd-icon {
+    background: #2f2;
+    text-align:center;
+    vertical-align:middle;
+    border:1px solid #000;
+    border-radius:20px;
+    line-height:40px;
+    z-index:-1;  /* appear after suggestion-icons */
+}
+
+tr.ip_normal {font-size:80%; color: black;}
+tr.ip_rfc1918 {font-size:60%; color: #ccc;}
+
+</style>
+
+<script type="text/template" id="help_dialog_content">
+<h1>DISCLAIMER: This is a prototype, anything in this help text can be outdated</h1>
+<p>
+This is a web interface to the OpenIPMap database. What you can do here is see what traceroutes look like when put on a map.
+To do this you'll need to create measurements using <a href="https://atlas.ripe.net">RIPE Atlas</a>. Once you have a traceroute
+measurement in RIPE Atlas you can put the traceroute measurement ID into this interface in the MSM input box in the top left.
+</p>
+<p>
+Once you submit a measurement the interface will fetch associated measurement data and will try to geolocate the IP addresses and
+put them on a world map. Sources of traceroutes will be shown in white, locations for which there is crowdsourced information will be 
+shown in green, and locations for which the system makes an educated guess are shown in red (note that these guesses can be wildly inaccurate
+at the moment). Nodes in blue are nodes that have DNS LOC records available.
+</p>
+If you click any of the links between geolocated nodes a dialog box will appear that shows the complete traceroute
+that this link is part of. This dialog box will contain normal traceroute information (hop,IP,ASN,hostname,RTTs), and also
+the best geolocation information available to the system at that point. Any crowdsourced information will have a green background,
+any system guesses (potentially wildly inaccurate) will be shown with a red background. The user can update the geolocation information
+by providing a geolocatable string (ie. something that can be recognised by a geocoding service as a city) and clicking 'OK'. At that point
+this updated information will be stored in the OpenIPMap database. If a user sees the geolocation guess by the system is wrong, but at the
+same time doesn't know the geolocation of an IP address, the user can submit an empty string, which tells the system to not guess for that IP
+address again. If the user-provided string was indeed geocodable, the user interface will update, and the path shown on the map for this traceroute
+will update and reflect the user-provided input.
+</p>
+</script>
+
+<!-- location: <form class="hostname_by_ajax" action="/routergeoloc/api/my_hostname_rules/" method="POST" enctype="multipart/form-data"> -->
+<script type="text/template" id="ip-popup-template-crowd">
+  ip: <%= ip %> (<a onclick="removegeoloc_from_ip('<%= ip %>')">don't geoloc</a>)</br>
+  host: <%= hostname %> (<a onclick="removegeoloc_from_hostname('<%= ip %>','<%= hostname %>')">don't geoloc</a>)</br>
+  <hr>
+</script>
+
+<script type="text/template" id="ip-popup-template2">
+  ip: <%= ip %></br>
+  host: <% try { print(decorate_hostname_for_ip( ip ) ) } catch(err) {}; %></br>
+  <% s = suggestions[0]; if ( typeof( s) === 'object' ) { %>
+  tag: <%= s['token'].join('/') %> </br>
+  city: <%= s['name'] %> </br>
+  weight: <%= s['weight'] %> </br>
+  <% }; // end suggestions %>
+  location: <form class="hostname_by_ajax" id="hostname_by_ajax_<%= ip %>" action="/routergeoloc/api/my_hostname_rules/" method="POST">
+    {% csrf_token %}
+    <input id="georesult" name="georesult" type="text" value="" />
+    <input id="hostname" name="hostname" type="hidden" value="<%= hostname %>" />
+    <input id="confidence" name="confidence" type="hidden" value="50" />
+    <input type="submit" value="ok" />
+  </form>
+  <a onclick="removegeoloc_from_ip('<%= ip %>')">don't try to geoloc this IP</a></br>
+  <a onclick="removegeoloc_from_hostname('<%= ip%>','<%= hostname %>')">don't try to geoloc this Hostname</a></br>
+  <hr>
+</script>
+
+<!-- this template needs to react to when new IPs come into place -->
+<script type="text/template" id="trace-table-template">
+  <table border=1 id="<%= elt_id %>" class="trace-table">
+    <%= id %>
+    <% for (var hop=1;hop <= max_hop; hop++) { %>
+      <% if ( typeof( trace_obj[ hop ] ) !== 'object' ) { %>
+        <tr>
+          <td> <%= hop %> </td>
+          <td> * </td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      <% } else { %>
+        <% for (ip in trace_obj[ hop ] ) { %>
+            <tr>
+            <td> <%= hop %> </td>
+            <td> <%= ip %> </td>
+            <td class='ip-loc trace-table-ip-host' id='trace-table-ip-host-<%= ip %>'></td> <!-- <% try { print(decorate_hostname_for_ip( ip )) } catch(err) {}; %> </td> -->
+            <td> <% print(trace_obj[hop][ip].join(' ')) %></td>
+            <td class='ip-loc trace-table-ip-loc' id='trace-table-ip-loc-<%= ip %>'></td>
+            </tr>
+        <% }; %>
+      <% }; %>
+    <% }; %>
+  </table>
+</script>
+
+<!-- note whitespaces/\n really mess things up here, so formatting of this template is a bit off -->
+
+<script type="text/template" id="hostname-tag-template"><!--
+--><span class="dropdown"><a href="#" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-delay="1000" data-close-others="false"><%= tag %></a><!--
+--><ul class="dropdown-menu">
+<li><a tabindex="-1" href="#">option1</a></li>
+<li class="divider"></li>
+<li><a tabindex="-1" href="#"><b><%= tag %></b> is not a location</a></li>
+</ul></span><!--
+--></script>
+
+<!-- END templates -->
+ <script>
+
+// sprintf (from http://stackoverflow.com/questions/610406/javascript-equivalent-to-printf-string-format )
+if (!String.prototype.format) {
+  String.prototype.format = function() {
+    var args = arguments;
+    return this.replace(/{(\d+)}/g, function(match, number) { 
+      return typeof args[number] != 'undefined'
+        ? args[number]
+        : match
+      ;
+    });
+  };
+}
+
+
+var map;
+var ACTIVE_TRACE=null;
+var MAX_PROBE_COUNT=50;
+
+// TODO: store 'suggestions' markers as backbonejs things
+var MARKERS_BY_LL={}; //markers keyed by lat/lon
+function markers_by_ll_remove_ip( ll_str, ip ) {
+    var marker_info = MARKERS_BY_LL[ ll_str ];
+    var ip_list = marker_info['ips'];
+    ip_list = _.without( ip_list, ip );
+    MARKERS_BY_LL[ll_str]['ips'] = ip_list;
+    var marker = marker_info['marker'];
+    if ( ip_list.length < 1 ) {
+        map.removeLayer( marker );
+    } else {
+        popup_for_ll( ll_str );
+    }
+}
+
+
+// store crowd markers as a backbone thing.
+var CrMarker = Backbone.Model.extend({
+    // Keyed by '<lat>|<lon>'
+    defaults: {
+        'ips': [],
+        'lat': null,
+        'lon': null,
+        'marker': null,
+    },
+    remove_ip: function( ip ) {
+        // NEEDS TO BE DONE SOMETIME. FOR NOW NOT THAT IMPORTANT
+        console.log("TODO Marker.remove_ip() to be implemented");
+        console.log( "pre", this.get('ips') );
+        var ips = this.get('ips');
+        this.set('ips', _.without(ips, ip));
+        console.log( "post", this.get('ips') );
+        if ( ips.length < 1 ) {
+            var marker = this.get('marker');
+            map.removeLayer( marker );
+        }
+    },
+    rebind_popup: function() {
+        // this: var marker_info = MARKERS_BY_LL[ll_str];
+        var ips = this.get('ips');
+        var mark = this.get('marker');
+        var html = '';
+        for (i_idx in ips) {
+            var ip = ips[i_idx];
+            var ip_obj = IpList.get(ip);
+            html += _.template( $('#ip-popup-template-crowd').html(), {'crowdsourced': ip_obj.get('crowdsourced'), 'ip': ip, 'hostname': ip_obj.get('hostname') });
+        }
+        mark.unbindPopup();
+        mark.bindPopup( html );
+        var p = mark.getPopup();
+        p['options'].maxHeight = 300;
+        // make forms ajax
+        var ajax_forms = $('.hostname_by_ajax');
+        ajax_forms.each(function() {
+            // This likely won't work, because of this vs $(this) :/ , needs testing
+            $(this).submit(function(ev) {
+                var id=$(this).attr('id');
+                var ip=id.replace(/hostname_by_ajax_(.*)/,"$1");
+                ev.preventDefault();
+                $.ajax({
+                    type: $(this).attr('method'),
+                    url: $(this).attr('action'),
+                    data: $(this).serialize(),
+                    success: function(data) {
+                        var ip_obj = IpList.get(ip);
+                        ip_obj.change_loc_by_crowdsource( data );
+                        alert('ok');
+                    },
+                    error: function(data) {
+                        alert('failed');
+                    },
+                });
+            });
+        });
+        // hmm maybe should return self?
+        return mark;
+    },
+});
+var CrMarkerCollection = Backbone.Collection.extend({
+    model: CrMarker,
+});
+var CrowdMarkers = new CrMarkerCollection();
+
+var TraceView = Backbone.View.extend({
+    tagName: 'div',
+    className: 'trace-table',
+    _width: 0,
+    initialize : function() {
+        var that=this;
+        this._ipTraceViews = [];
+        var trace_obj = this.model.get('trace_obj');
+        var hops = _.keys( trace_obj );
+        max_hop = _.max( _.map(hops, function(x){ return parseInt(x); }) );
+        for (var hop=1;hop <= max_hop; hop++) {
+            if ( ! trace_obj.hasOwnProperty( hop ) ) { continue };
+            for (var ip in trace_obj[ hop ]) {
+                var ip_obj = IpList.get(ip);
+                var ipttv = new IpTraceTableView({model: ip_obj});
+                ipttv._hop_txt = hop;
+                ipttv._rtts_txt = trace_obj[hop][ip].join(' ');
+                that._ipTraceViews.push( ipttv );
+            }
+        }
+    },
+    render: function() {
+        var that=this;
+        var id_parts = this.model.id.split('|');
+        var table_id = "TraceView-{0}".format( this.model.id.split('|').join('-') );
+        this.$el.empty();
+        this.$el.attr('id', table_id );
+        this.$el.attr('title',"msm:{0} prb:{1} ts:{2}".format( id_parts[0], id_parts[1], ts2iso( id_parts[2] ) ) );
+        this.$el.dialog({
+            // minwidth here is a hack around Safari behaviour :(
+            minWidth: 800,
+            close: function( ev, ui ) {
+                that.remove();
+                that.unbind();
+            }
+        });
+        var header_div = $('<div>');
+        var hide_ref = $("<a href='#'>remove</a>");
+        header_div.append( hide_ref );
+        this.$el.append( header_div );
+        hide_ref.on("click", function() {
+            that.model.remove();
+        });
+        this.$el.append( '<table>' );
+        this.$el.find('table').append(
+            '<th>hop</th><th>IP</th><th>ASN</th><th>hostname</th><th>location</th><th>RTTs</th>'
+        );
+        // Render each sub-view and append it to the parent view's element.
+        _(this._ipTraceViews).each(function(ipttv) {
+            that.$el.find('table').append(ipttv.render().el);
+            ipttv.model.on("change", that.changeWidth, that);
+        });
+        this.changeWidth();
+        return this;
+    },
+    changeWidth: function(ipttv) {
+        // must be an easier way
+        var t_width = this.$el.find('table').outerWidth() +10;
+        this.$el.dialog('option','width', t_width );
+        /*
+        var that=this;
+        _(this._ipTraceViews).each(function(ipttv) {
+            var el_width = ipttv.$el.outerWidth() + 10;
+            if ( el_width > that._width ) {
+                    that._width = el_width;
+            }
+        });
+        this.$el.dialog('option','width', this._width);
+        */
+    }
+});
+
+
+var IpTraceTableView = Backbone.View.extend({
+    tagName: 'tr',
+    _hop_txt: '',
+    _rtts_txt: '',
+    initialize: function() {
+        var that=this;
+        // this.model.on("change", this.render);
+        this.model.on("change", this.render, this);
+        this.render();
+        return this;
+    },
+    render: function() {
+        var el = $(this.el);
+        el.empty();
+        if ( this.model.get('is_rfc1918') == true ) {
+            el.addClass('ip_rfc1918');
+        } else {
+            el.addClass('ip_normal');
+        }
+        el.append("<td>{0} </td>".format( this._hop_txt ) );
+        el.append("<td>{0}</td>".format( this.model.id ) );
+        el.append("<td title='{0}'>{1}</td>".format( 
+            this.model.has('asname') ? ( this.model.get('asname') || '(none)') : '',
+            this.model.has('asn') ? ( this.model.get('asn') || '(none)') : '<img src=/static/scanner.gif width=40>' ) 
+        );
+        el.append("<td>{0}</td>".format( this.model.get('has_meta') ? ( this.model.get('hostname') || '(none)' ) : '<img src=/static/scanner.gif width=40>' ) );
+        if ( this.model.get('is_rfc1918') == true ) {
+            el.append('<td> </td>');
+        } else {
+            this.renderLocForm( el );
+        }
+        el.append('<td>{0}</td>'.format( this._rtts_txt ));
+        return this;
+    },
+    renderLocForm: function(el) {
+        //el.append("<td class='ip-loc trace-table-ip-loc' id='trace-table-ip-loc-{0}'>TEST</td>".format( this.model.get('id') ) );
+        var form = $("<form/>");
+        var selected_txt = '';
+        var background_color = '#fff';
+        var crowd = this.model.get('crowdsourced');
+        var guess = this.model.get('suggestions');
+        var hostname = this.model.get('hostname');
+        if (crowd.length > 0 ) {
+            selected_txt = crowd[0]['canonical_georesult'];
+            background_color = '#2f2';
+        } else if ( guess.length > 0 ) {
+            selected_txt = guess[0]['name'];
+            background_color = '#f00';
+        }
+        var i=$("<input/>)", {value: selected_txt, text: selected_txt});
+        i.attr('name','georesult');
+        i.css('background-color',background_color);
+        var i_span = $("<span class='ui-widget'></span>");
+        i_span.append( i );
+        form.append( i_span );
+        form.append("{% csrf_token %}");
+        if ( hostname ) {
+            form.append($("<input/>",{type:'hidden',name:'hostname',value:hostname}));
+            form.append($("<input/>",{type:'hidden',name:'confidence',value:50}));
+            form.append("<input type='submit' value='ok'/>");
+        }
+        var td = $('<td>');
+        td.append( form );
+        el.append( td );
+        var that=this;
+        form.submit( function(ev) {
+            var button = $(this).find('input[type=submit]');
+            var img = $('<img>').attr('src', '/static/load.gif').insertAfter(button);
+            button.css('display','none');
+            ev.preventDefault();
+            $.ajax({
+                type: 'POST',
+                url: '/routergeoloc/api/my_hostname_rules/',
+                data: $(this).serialize(),
+                success: function(data) {
+                    that.model.change_loc_by_crowdsource( data );
+                },
+                error: function(data) {
+                    button.css('display','inline');
+                    img.css('display','none');
+                    alert("crowdsourced geoloc submission failed!");
+                }
+            });
+        });
+    },
+});
+
+var Ip = Backbone.Model.extend({
+    defaults: {
+        'dnsloc': null,
+        'tag': null, // tag that was selected
+        'traces': {}, // obj of trace objects, keyed by trace_id with some relevant info for this IP
+        'marker': null, // currently selected marker
+        'lat': null,
+        'lon': null,
+        'suggestions': [], // info from the suggestions engine
+        'crowdsourced': [], // crowdsourced info
+        'has_meta': false, // meta-info loaded from callback
+        'is_rfc1918': false
+    },
+    initialize: function() {
+        this.on('remove', function() {
+            this.remove_geoloc();
+        });
+    },
+    remove_geoloc: function() {
+        var old_lat = this.get('lat');
+        var old_lon = this.get('lon');
+        var ll_str = [old_lat,old_lon].join('|');
+        this.set('lat', null);
+        this.set('lon', null);
+        // remove it from the suggestion-markers, and remove the marker if
+        var marker_info = MARKERS_BY_LL[ ll_str ];
+        var ip_list = marker_info['ips'];
+        ip_list = _.without( ip_list, this.get('id') );
+        MARKERS_BY_LL[ll_str]['ips'] = ip_list;
+        var marker = marker_info['marker'];
+        if ( ip_list.length < 1 ) {
+            map.removeLayer( marker );
+        } else {
+            popup_for_ll( ll_str );
+        }
+        // remove it from the crowdsource-markers, and remove marker if not needed
+        var crowd_marker = CrowdMarkers.get( ll_str );
+        if ( typeof( crowd_marker ) == 'object') {
+            crowd_marker.remove_ip( this.get('id') );
+        }
+        for ( tr_id in this.get('traces') ) {
+            redraw_trace( tr_id );
+        }
+    },
+    change_loc_by_crowdsource: function( crowdsource_info ) {
+        var ip = this.get('id');
+        var crowdsourced = this.get('crowdsourced');
+        crowdsourced.unshift( crowdsource_info );
+        var old_lat = this.get('lat');
+        var old_lon = this.get('lon');
+        var old_ll_key = [old_lat,old_lon].join('|');
+        var old_marker_cr = CrowdMarkers.get(old_ll_key);
+        if ( typeof(old_marker_cr) == 'object') {
+            // remove ip from old crowds marker
+            old_marker_cr.remove_ip( this.get('id') );
+        }
+        var old_marker_guess = MARKERS_BY_LL[old_ll_key];
+        if ( typeof(old_marker_guess) == 'object') {
+            markers_by_ll_remove_ip( old_ll_key, ip );
+        }
+        var to_lat = crowdsource_info['lat'];
+        var to_lon = crowdsource_info['lon'];
+        var to_ll_key = [to_lat,to_lon].join('|');
+        var to_marker = CrowdMarkers.get(to_ll_key);
+        if ( to_lat && to_lon ) {
+            if ( typeof( to_marker ) == 'object' ) {
+                to_marker.get('ips').push( ip );
+            } else { // create the marker
+                to_marker = CrowdMarkers.add({
+                    id: to_ll_key,
+                    lat: to_lat,
+                    lon: to_lon,
+                    marker: create_marker_icon(to_lat,to_lon,this,crowdIcon),
+                    ips: [ ip ],
+                });
+            }
+            var mark=to_marker.rebind_popup();
+            // mark.openPopup();
+            // now update and redraw
+            this.set('lat',to_lat);
+            this.set('lon',to_lon);
+        } else {
+            this.set('lat',null);
+            this.set('lon',null);
+        }
+        for ( tr_id in this.get('traces') ) {
+            redraw_trace( tr_id );
+        }
+        //redraw any open traceroute popups
+    },
+    change_loc_by_loc_id: function(loc_id) {
+        // move this loc_id to top of suggestions
+        var suggestions = this.get('suggestions');
+        var loc_entry = {};
+        var loc_entry_idx = -1;
+        _.each( suggestions, function(entry,idx) {
+            if ( entry['loc_id'] == loc_id ) {
+                loc_entry = entry;
+                loc_entry_idx = idx;
+            }
+        });
+        suggestions.splice( loc_entry_idx );
+        suggestions.unshift( loc_entry );
+        // remove it from the marker (need to refactor, duplicate of above)
+        var old_lat = this.get('lat');
+        var old_lon = this.get('lon');
+        var old_ll_str = [old_lat,old_lon].join('|');
+
+        markers_by_ll_remove_ip( old_ll_str, this.get('id') );
+
+        this.set('lat', loc_entry['lat']);
+        this.set('lon', loc_entry['lon']);
+        // redraw all traces we need to redraw
+        for ( tr_id in this.get('traces') ) {
+            redraw_trace( tr_id );
+        }
+        // add marker or add to marker
+        var new_ll_str = [loc_entry['lat'],loc_entry['lon']].join('|');
+        if (new_ll_str in MARKERS_BY_LL) {
+            var marker_info = MARKERS_BY_LL[ new_ll_str ];
+            marker_info['ips'].push( this.get('id') );
+            popup_for_ll( new_ll_str );
+        } else {
+            var mark= L.marker([loc_entry['lat'],loc_entry['lon']], {icon: nameIcon}).addTo(map);
+            var mark_info = {
+                'ips': [ this.get('id') ],
+                'marker': mark,
+            };
+            MARKERS_BY_LL[ new_ll_str ] = mark_info;
+        }
+    },
+});
+var IpListCollection = Backbone.Collection.extend({
+    model: Ip,
+});
+var IpList = new IpListCollection();
+
+function popup_for_ll( ll_str ) {
+    var marker_info = MARKERS_BY_LL[ll_str];
+    var ips = marker_info['ips'];
+    var mark = marker_info['marker'];
+    var html = '';
+    for (i_idx in ips) {
+        var ip = ips[i_idx];
+        var ip_obj = IpList.get(ip);
+        html += _.template( $('#ip-popup-template2').html(), {'suggestions': ip_obj.get('suggestions'), 'ip': ip, 'hostname': ip_obj.get('hostname') });
+    }
+    mark.unbindPopup();
+    mark.bindPopup( html );
+    var p = mark.getPopup();
+    p['options'].maxHeight = 300;
+    // make this (open) optional
+    // mark.openPopup();
+    // make forms ajax
+    var ajax_forms = $('.hostname_by_ajax');
+    ajax_forms.each(function() {
+        $(this).submit(function(ev) {
+            var id=$(this).attr('id');
+            var ip=id.replace(/hostname_by_ajax_(.*)/,"$1");
+            ev.preventDefault();
+            $.ajax({
+                type: $(this).attr('method'),
+                url: $(this).attr('action'),
+                data: $(this).serialize(),
+                success: function(data) {
+                    var ip_obj = IpList.get(ip);
+                    ip_obj.change_loc_by_crowdsource( data );
+                    alert('ok');
+                },
+                error: function(data) {
+                    alert('failed');
+                },
+            });
+        });
+    });
+}
+
+var Trace = Backbone.Model.extend({
+    defaults: {
+        'ui_segments': [],
+        'trace_obj': {},
+        'dst_addr': null,
+        'dst_name': null,
+        'weight_n': 2,
+        'weight_active': 7,
+        'is_active': false,
+    },
+    remove: function() {
+        this.removeSegments();
+        // now loop over all ips in trace_obj
+        var to = this.get('trace_obj');
+        for (hop in to) {
+            for (ip in to[hop] ) {
+                var ip_obj = IpList.get( ip );
+                var traces = ip_obj.get('traces');
+                if ( _.keys( traces ).length == 0 ) {
+                    console.log( "PRE", IpList.length );
+                    IpList.remove( ip );
+                    console.log( "POST", IpList.length );
+                }
+            }
+        }
+        alert("BUG: Removing a traceroute currently only removes the path from view, not the cities it went through");
+    },
+    removeSegments: function() {
+        var segments = this.get('ui_segments');
+        for (s_idx in segments) {
+            var s = segments[s_idx];
+            map.removeLayer(s);
+        }
+        this.set('ui_segments',[]);
+    },
+    highlite: function() {
+        var segments = this.get('ui_segments');
+        for (s_idx in segments) {
+            var s = segments[s_idx];
+            s.setStyle({
+                'weight': this.get('weight_active'),
+                'opacity': 1,
+            });
+        }
+    },
+    unhighlite: function() {
+        if ( this.get('is_active') ) { return };
+        var segments = this.get('ui_segments');
+        for (s_idx in segments) {
+            var s = segments[s_idx];
+            s.setStyle({
+                'weight': this.get('weight_n'),
+                'opacity': 0.5,
+            });
+        }
+    },
+    showAsText: function( parent_elt) {
+        var trace_view = $( "#TraceView-{0}".format( this.id ).split('|').join('-') );
+        if ( trace_view.length != 1 ) {
+            /* if length > 1? */
+            trace_view = new TraceView({ model: this });
+            trace_view.render();
+        }
+/*
+        var hops = _.keys( trace_obj );
+        var elt_id = "trace-table-{0}-{1}-{2}".format( trace_id_parts[0], trace_id_parts[1], trace_id_parts[2] );
+        var root_id = "dialog-{0}-{1}-{2}".format( trace_id_parts[0], trace_id_parts[1], trace_id_parts[2] );
+
+        var root_elt = $('#{0}'.format(root_id) )
+        if ( root_elt.length == 0 ) { 
+            root_elt = $('<div id="{0}" title="msm:{1} prb:{2} ts:{3}"></div>'.format( root_id, trace_id_parts[0], trace_id_parts[1], ts2iso( trace_id_parts[2] )  ) );
+        }
+        root_elt.data('trace_obj', trace_obj);
+
+        var trace_table = $('#{0}'.format(elt_id));
+        if ( trace_table.length == 0 ) {
+            max_hop = _.max( _.map(hops, function(x){ return parseInt(x); }) );
+            var txt = _.template( $('#trace-table-template').html(),
+                { 'trace_obj': trace_obj,
+                'id': trace_id,
+                'elt_id': elt_id,
+                'hops': hops,
+                'max_hop': max_hop
+                }
+            );
+            root_elt.html( txt );
+            root_elt.dialog();
+        }
+        // now it's bound we can define events on 'txt'
+        $('.trace-table-ip-host').each(function(idx,elt) {
+            insert_ip_hostname( elt );
+        });
+        $('.trace-table-ip-loc').each(function(idx,elt) {
+            insert_ip_loc_form( elt );
+        });
+        var table_width=$( '#{0}'.format(elt_id) ).outerWidth();
+        root_elt.dialog("option", "width", table_width+5 );
+        root_elt.on( "dialogclose", function( ev, ui ) {
+            ev.target.remove();
+        });
+*/
+    },
+});
+var TraceListCollection = Backbone.Collection.extend({
+    model: Trace,
+    unhighlite_all: function() {
+        this.forEach( function( trace_obj ) {
+            trace_obj.set('is_active',false);
+            trace_obj.unhighlite();
+        });
+    }
+});
+var TraceList = new TraceListCollection();
+
+prbs={};
+var nameIcon = L.divIcon({className: 'name-icon'});
+var dnslocIcon = L.divIcon({className: 'dnsloc-icon'});
+var areaIcon = L.divIcon({className: 'area-icon'});
+var prbIcon = L.divIcon({className: 'prb-icon'});
+var crowdIcon = L.divIcon({className: 'crowd-icon'});
+
+// hostname funcs
+function tokenize_hostname( hostname ) {
+    // this is the default tokenizer
+    var tags = hostname.split(/[^a-zA-Z]+/);
+    return tags;
+}
+
+function ts2iso ( ts ) {
+    var d = new Date(ts * 1000);
+    return d.toISOString();
+}
+
+function on_tag_loc_selection( ip, tag, loc_id ) {
+    // move this loc_id to top of suggestions list
+    var ip_obj = IpList.get( ip );
+    ip_obj.change_loc_by_loc_id( loc_id );
+    // callback so backend can store this
+    // make this IP and its related traces redrawn
+}
+
+function tag_in_hostname_mouseover_dropdown( ip, tag ) {
+    // find suggestions based on this tag
+    var ip_obj = IpList.get( ip );
+    tag = tag.toLowerCase();
+    var dd = $("<ul/>");
+    dd.addClass("dropdown-menu");
+    dd.append('<li class="divider"></li>');
+    var ip_obj = IpList.get( ip );
+    var suggestions = ip_obj.get('suggestions');
+    _.each( suggestions , function(entry,idx) {
+        var tokens = entry['token'];
+        if ( _.contains( tokens, tag ) ) {
+            dd.append("<li><a onclick='on_tag_loc_selection(\"{0}\",\"{1}\",{2})'>{3} ({4})</a></li>".format( ip, tag, entry['loc_id'], entry['name'], entry['kind'] ) );
+        }
+    });
+    dd.append('<li class="divider"></li>');
+    dd.append('<li><a href="#"><b>{0}</b> is not a location</a></li>'.format(tag) );
+    // return '<ul class="dropdown-menu"><li>1</li><li class="divider"></li><li>2</li></ul>';
+    return dd;
+}
+
+function tag_in_hostname_mouseover( elt, evt, ip, tag ) {
+    // can't use jQuery $( #id ) directly here because of the '.'
+    var id_str = "span[id='tag_in_hostname-{0}-{1}']".format(ip,tag);
+    var t = $( id_str );
+    t.addClass("dropdown-toggle");
+    t.attr('data-toggle', 'dropdown');
+    t.attr('data-hover', 'dropdown');
+    t.attr('data-delay', 1000);
+    t.attr('data-close-others','true');
+    t.after( tag_in_hostname_mouseover_dropdown(ip,tag) );
+    t.dropdownHover();
+    // create a dropdown with
+    // alternate names we have
+    // option to all alternate names
+}
+
+function decorate_tag_in_hostname(ip, tag) {
+    var str= "<span class='dropdown'><span id='tag_in_hostname-{0}-{1}' class='tag_in_hostname' onmouseover='tag_in_hostname_mouseover(this,event,\"{0}\",\"{1}\")'>{1}</span></span>".format( ip, tag );
+    return str;
+    //return _.template($('#hostname-tag-template').html() , {'tag':tag, 'ip_obj': IpList.get(ip)} );
+}
+
+function insert_ip_hostname( elt_txt ) {
+    var elt = $( elt_txt );
+    var elt_id = elt.attr('id');
+    var ip = elt_id.replace(/trace-table-ip-host-(.*)/,"$1");
+    var ip_obj = IpList.get(ip);
+    if (! ip_obj ) {
+        elt.html( $('<img>').attr('src', '/static/load.gif') );
+    } else {
+        if ( ip_obj.get('has_meta') == false ) {
+            elt.html( $('<img>').attr('src', '/static/load.gif') );
+        } else {
+            var hostname = ip_obj.get('hostname');
+            if ( hostname ) {
+                elt.html( hostname );
+            } else {
+                elt.html( '-' );
+            }
+        }
+    }
+}
+
+function insert_ip_loc_form( elt_txt ) {
+    // it's a class. used multiple times! TODO fix
+    // <td class='ip-loc trace-table-ip-loc' id='trace-table-ip-loc-<%= ip %>'></td>
+    var elt = $( elt_txt );
+    var elt_id = elt.attr('id');
+    var ip = elt_id.replace(/trace-table-ip-loc-(.*)/,"$1");
+    var ip_obj = IpList.get(ip);
+    var hostname = ip_obj.get('hostname');
+    var crowd = ip_obj.get('crowdsourced');
+    var guess = ip_obj.get('suggestions');
+    $(elt).data('routergeoloc.ip',ip);
+    var form = $("<form/>");
+    form.addClass('ui-widget');
+    form.addClass('location-in-trace-text-form');
+    form.attr('id','ip-loc-form-{0}'.format( ip ) );
+    var selected_txt = '';
+    var background_color = '#fff';
+    if (crowd.length > 0 ) {
+        selected_txt = crowd[0]['canonical_georesult'];
+        background_color = '#2f2';
+    } else if ( guess.length > 0 ) {
+        selected_txt = guess[0]['name'];
+        background_color = '#f00';
+    }
+    var i=$("<input/>)", {value: selected_txt, text: selected_txt});
+    /*
+    for ( cr_idx in crowd ) {
+        i.append("<option class='ip-loc-option-crowd' value='{0}'>{0}</option>".format( crowd[cr_idx]['canonical_georesult'] ) );
+    }
+    for ( gu_idx in guess ) {
+        i.append("<option class='ip-loc-option-guess' value='{0}'>{0}</option>".format( guess[gu_idx]['name'] ) );
+    }
+    */
+    i.attr('name','georesult');
+    i.css('background-color',background_color);
+    var i_span = $("<span class='ui-widget'></span>");
+    i_span.append( i );
+    form.append( i_span );
+    /*
+    var test_data = [
+      { label: "anders", category: "" },
+      { label: "annhhx10", category: "Products" },
+      { label: "anders andersson", category: "People" },
+    ];
+    i.catcomplete({
+        delay: 0,
+        source: test_data
+    }); */
+    form.append("{% csrf_token %}");
+    if ( hostname ) {
+        form.append($("<input/>",{type:'hidden',name:'hostname',value:hostname}));
+        form.append($("<input/>",{type:'hidden',name:'confidence',value:50}));
+        form.append("<input type='submit' value='ok'/>");
+    }
+    //elt.append( form );
+    elt.html( form );
+    form.submit(function(ev) {
+        // bind spinners to buttons
+        $(this).css('display', 'none');
+        $('<img>').attr('src', '/static/load.gif').insertAfter($(this));
+        ev.preventDefault();
+        $.ajax({
+            type: 'POST',
+            url: '/routergeoloc/api/my_hostname_rules/',
+            data: $(this).serialize(),
+            success: function(data) {
+                ip_obj.change_loc_by_crowdsource( data );
+            },
+            error: function(data) {
+                console.log( "fail", data, ip_obj );
+                alert("crowdsourced geoloc submission failed!");
+                /* remove image */
+            }
+        });
+    });
+/*
+        var ajax_forms = $('.location-in-trace-text-form');
+        ajax_forms.each(function() {
+            $(this).submit(function(ev) {
+                var id=$(this).attr('id');
+                var ip=id.replace(/location-for-ip-(.*)/,"$1");
+                ev.preventDefault();
+                $.ajax({
+                    type: $(this).attr('method'),
+                    url: $(this).attr('action'),
+                    data: $(this).serialize(),
+                    success: function(data) {
+                        var ip_obj = IpList.get(ip);
+                        ip_obj.change_loc_by_crowdsource( data );
+                        for (trace_id in ip_obj.get('traces')) {
+                            var trace_obj = TraceList.get( trace_id );
+                            if( trace_obj && trace_obj.get('is_active') ) {
+                                trace_obj.showAsText( $('#trace_info') );
+                            }
+                        }
+                    },
+                    error: function(data) {
+                        alert('failed');
+                    },
+                });
+            });
+        });
+*/
+}
+
+function decorate_location_for_ip( ip ) {
+    var ip_obj = IpList.get(ip);
+    var hostname = ip_obj.get('hostname');
+    var crowd = ip_obj.get('crowdsourced');
+    var guess = ip_obj.get('suggestions');
+
+    var form = $("<form/>",{
+        method: 'POST',
+        action: '/routergeoloc/api/my_hostname_rules/'
+    });
+    form.addClass('ui-widget');
+    form.addClass('location-in-trace-text-form');
+    form.attr('id','location-for-ip-{0}'.format( ip ) );
+
+    var selected_txt = '';
+    var background_color = '#fff';
+    if (crowd.length > 0 ) {
+        selected_txt = crowd[0]['canonical_georesult'];
+        background_color = '#2f2';
+    } else if ( guess.length > 0 ) {
+        selected_txt = guess[0]['name'];
+        background_color = '#f00';
+    }
+    i=$("<input/>)", {value: selected_txt, text: selected_txt});
+    i.attr('name','georesult');
+    i.css('background-color',background_color);
+    i.appendTo(form);
+
+    form.append("{% csrf_token %}");
+    if ( hostname ) {
+        form.append($("<input/>",{type:'hidden',name:'hostname',value:hostname}));
+        form.append($("<input/>",{type:'hidden',name:'confidence',value:50}));
+        form.append("<input type='submit' value='ok'/>");
+    }
+    /* fires loads of times: $(document).on("submit",form,function(ev) {
+        console.log("YIH",form,ev);
+    }); */
+    var out = $("<span/>");
+    out.append(form);
+    return out.html();
+}
+
+function decorate_hostname_for_ip( ip ) {
+    var html = "<span id='hostname-for-ip-{0}'>".format( ip );
+    try {
+        var ip_obj = IpList.get( ip );
+        if (! ip_obj || (ip_obj.get('has_meta') == false) ) {
+            html += "<img src='/static/load.gif'/>";
+        } else {
+            var hostname = ip_obj.get('hostname');
+            var tags = tokenize_hostname( hostname );
+            var unm_hostname = hostname; // unmatched part
+            for (t_idx in tags) {
+                var tag = tags[t_idx];
+                if ( tag.length == 0 ) continue;
+                var idx_in_h = unm_hostname.indexOf(tag);
+                if ( idx_in_h == -1 ) continue; //shouldnt happen
+                if ( idx_in_h == 0 ) {
+                    html += decorate_tag_in_hostname( ip, tag );
+                    unm_hostname = unm_hostname.substr( tag.length );
+                } else if (idx_in_h > 0) {
+                    html += unm_hostname.substr(0, idx_in_h);
+                    html += decorate_tag_in_hostname( ip, tag );
+                    unm_hostname = unm_hostname.substr( idx_in_h + tag.length );
+                }
+            }
+            html += unm_hostname;
+        }
+    } catch(err) { console.log( 'decoreate error',err )};
+    html += '</span>';
+    return html;
+}
+
+
+function show_traces( data ) {
+    var desc = $( "<li><a href='#'>{0} <b>{1}</b> {2}prbs {3}-{4}</a></li>".format(
+        this.msm_id,
+        this.msm_desc,
+        this.probe_cnt,
+        ts2iso( this.start ),
+        ts2iso( this.stop )
+    ) );
+    this.dmm.append( desc );
+    this.dmm.show();
+    // add to TraceList
+    for (trace_id in data['trs']) {
+        // trace_obj = data['trs'][trace_id]['trace'];
+        trace_obj = data['trs'][trace_id];
+        var this_trace = TraceList.add({'id': trace_id, 'trace_obj': trace_obj});
+        if ( _.has(data,'dst_addr') && _.has( data['dst_addr'], trace_id ) ) {
+            this_trace.set('dst_addr', data['dst_addr'][trace_id] );
+        }
+        if ( _.has(data,'dst_name') && _.has( data['dst_name'], trace_id ) ) {
+            this_trace.set('dst_name', data['dst_name'][trace_id] );
+        }
+    }
+    for (p_idx in data['prb']) {
+        var p = data['prb'][ p_idx ];
+        var lat = p['lat'];
+        var lon = p['lon'];
+        var mark=L.marker([lat,lon],{icon: prbIcon}).addTo(map);
+        // code to show traces per probe
+    }
+    // traces = data['trs'];
+    // ips = data['ips'];
+    prbs = data['prb'];
+    for (ip in data['ips']) {
+            // create ip object
+            var ip_obj = IpList.add({'id': ip, traces: {}});
+            for ( tr_id in data['ips'][ip]['traces'] ) {
+                ip_obj.get('traces')[tr_id] = data['ips'][ip]['traces'][tr_id] ;
+            }
+            if ( ip.match(/(^192\.168\.)|(^10\.)|(^172\.1[6-9]\.)|(^172\.2[0-9]\.)|(^172\.3[0-1]\.)/) ) {
+                ip_obj.set('is_rfc1918', true );
+                // handle RFC1918 / private
+                ip_obj.set('asn','(RFC1918)');
+                ip_obj.set('hostname','(none)');
+                ip_obj.set('has_meta', true);
+                continue;
+            }
+            // #TODO get geoconstraints from the measurement itself
+            // #TODO do this in waves (hop1 first?)
+            ip_url = 'ipmeta.json?ip=' + ip;
+            $.ajax({
+                url: ip_url,
+                type: 'GET',
+                dataType: 'json',
+                async: true,
+                success: show_ip
+            });
+            ip_asn_url = "https://stat.ripe.net/data/prefix-overview/data.json?max_related=0&resource={0}&callback=cb".format( ip );
+            var that_ip_obj = ip_obj;
+            $.ajax({
+                url: ip_asn_url,
+                dataType: 'jsonp',
+                async: true,
+                context: ip_obj,
+                success: function(data) {
+                    if ( data.hasOwnProperty('data') && 
+                         data['data'].hasOwnProperty('asns') &&
+                         data['data']['asns'].length > 0
+                        ) {
+                        this.set('asn', data['data']['asns'][0]['asn'])
+                        this.set('asname', data['data']['asns'][0]['holder'])
+                    } else {
+                        this.set('asn', '(none)');
+                        this.set('asname', '(none)');
+                    }
+                }
+            });
+    }
+}
+
+function redraw_trace( trace_id ) {
+    // remove what's already there
+    var t = TraceList.get(trace_id);
+    var trace = t.get('trace_obj');
+    t.removeSegments();
+
+    var max_hop=0;
+    var min_hop=255;
+    var hop2ll = {};
+    // hop0 is always the probe
+    var trace_id_parts = trace_id.split('|'); // msmid|prbid|timestamp
+    var prb_id = trace_id_parts[1];
+    try {
+        var prb_id_ll = prbs[prb_id]['lat'] + '|' + prbs[prb_id]['lon'];
+        min_hop = 0;
+        hop2ll[0] = {};
+        hop2ll[0][prb_id_ll] = 1 ;
+    } catch(err) {} // some probes we don't have a geoloc for, so min_hop is a hack around that
+    for (hop in trace) {
+        hop = parseInt(hop);
+        if (hop > max_hop) { max_hop = hop };
+        if (hop < min_hop) { min_hop = hop };
+        for (ip in trace[hop]) {
+            var ip_obj = IpList.get(ip);
+            var lat = ip_obj.get('lat');
+            var lon = ip_obj.get('lon');
+            if ( lat && lon ) { // conveniently removes 0,0 as well
+                if (hop2ll[ hop ] === undefined) {
+                    hop2ll[ hop ] = {};
+                }
+                var ll_str = [lat,lon].join('|');
+                hop2ll[ hop ][ ll_str ] = 1;
+            }
+        }
+    }
+    // loop from min_hop to max_hop
+    var this_hop = min_hop;
+    var this_ll = [];
+    for (ll in hop2ll[0]) {
+        this_ll.push( ll );
+    }
+    var last_ll = this_ll;
+    var last_hop = this_hop;
+
+    this_hop++;
+    while (this_hop <= max_hop) {
+        if ( _.has( hop2ll , this_hop ) ) {
+            this_ll = [];
+            for (ll in hop2ll[this_hop]) {
+                this_ll.push( ll );
+            }
+            if ( this_ll.length > 0 && last_ll.length > 0 ) {
+                for (last_idx in last_ll) {
+                    for (this_idx in this_ll) {
+                        last_ll_entry = last_ll[last_idx].split('|');
+                        this_ll_entry = this_ll[this_idx].split('|');
+                        var p1 = new L.LatLng( last_ll_entry[0], last_ll_entry[1] );
+                        var p2 = new L.LatLng( this_ll_entry[0], this_ll_entry[1] );
+                        var scale = 255 - Math.round(255*this_hop/max_hop);
+                        var pl_options = {};
+                        pl_options['color'] = 'rgb(50,50,{0})'.format(scale);
+                        pl_options['opacity'] = 0.5;
+                        pl_options['weight'] = t.get('weight_n');
+                        if ( t.get('is_active') ) {
+                            pl_options['weight'] = t.get('weight_active');
+                        }
+                        if ( this_hop - last_hop > 1 ) {
+                            pl_options['dashArray'] = "4, 8";
+                        }
+                        var pl = new L.Polyline([p1,p2], pl_options).addTo(map);
+                        t.get('ui_segments').push( pl );
+                        pl.on('mouseover', function(evt) {
+                            var t = TraceList.get( trace_id );
+                            t.highlite()
+                        });
+                        pl.on('mouseout', function(evt) {
+                            var t = TraceList.get( trace_id );
+                            t.unhighlite()
+                        });
+                        pl.on('click', function(evt) {
+                            TraceList.unhighlite_all();
+                            var t = TraceList.get( trace_id );
+                            t.set('is_active',true);
+                            t.highlite();
+                            t.showAsText( $('#trace_info') );
+                        });
+                    }
+                }
+            }
+            last_ll = this_ll;
+            last_hop = this_hop;
+        }
+        this_hop++;
+    }
+    if ( t.get('is_active') ) {
+        t.showAsText( $('#trace_info') );
+    }
+}
+
+function removegeoloc_from_ip( ip ) {
+    var ip_obj = IpList.get(ip);
+    ip_obj.remove_geoloc();
+    // now ajax post this assertion
+    /* TODO */
+}
+
+function removegeoloc_from_hostname( ip, hostname ) {
+    var ip_obj = IpList.get(ip);
+    ip_obj.set('suggestions',[]);
+    ip_obj.remove_geoloc();
+    // now ajax post this assertion
+    $.post('/routergeoloc/api/my_hostname_rules/',
+        {
+            csrfmiddlewaretoken: '{{ csrf_token }}',
+            hostname: hostname,
+            georesult: null,
+            confidence: 42,
+        },
+        function(data,http_code) {
+            console.log( data, http_code );
+        }
+    );
+}
+
+function create_marker_icon(lat,lon,ip_obj,icon) {
+        var mark=L.marker([lat,lon],{icon: icon}).addTo(map);
+        ip_obj.set('marker', mark);
+        return mark;
+}
+
+function show_asn_for_ip( ip, data ) {
+}
+
+function show_ip( data ) {
+    var ip = data['ip'];
+    var ip_obj = IpList.get( ip );
+    ip_obj.set('hostname', data['hostname']);
+    ip_obj.set('suggestions', data['suggestions'] );
+    ip_obj.set('crowdsourced', data['crowdsourced'] );
+    ip_obj.set('has_meta',true);
+    var hostname = data['hostname'];
+    var mark; //leaflet marker object
+    // TODO: figure out how to make crowdsourced/suggested pop up
+    if ( data['crowdsourced'].length > 0 ) {
+        lat = data['crowdsourced'][0]['lat'] || 0;
+        lon = data['crowdsourced'][0]['lon'] || 0;
+        if (lat || lon ) { // draw them only if a lat and lon are defined (removes 0,0)
+            // this catches the case where there is a suggestion to not geoloc this
+            ip_obj.set('lat',lat);
+            ip_obj.set('lon',lon);
+            var ll_key = [lat,lon].join('|');
+            var cr_marker = CrowdMarkers.get(ll_key);
+            if ( typeof(cr_marker) == 'object' ) {
+                cr_marker.get('ips').push(ip);
+            } else {
+                cr_marker = CrowdMarkers.add({
+                    id: ll_key,
+                    lat: lat,
+                    lon: lon,
+                    marker: create_marker_icon(lat,lon,ip_obj,crowdIcon),
+                    ips: [ ip ],
+                });
+            }
+            cr_marker.rebind_popup();
+            mark=cr_marker.get('marker');
+        }
+    } else if ( 'dnsloc' in data ) {
+        lat = data['dnsloc']['lat'];
+        lon = data['dnsloc']['lon'];
+        ip_obj.set('lat',lat);
+        ip_obj.set('lon',lon);
+        mark=create_marker_icon(lat,lon,ip_obj,dnslocIcon);
+    } else if ( data['suggestions'] instanceof Array && data['suggestions'].length > 0 ) {
+        entry = data['suggestions'][0]; // take the first by default
+        lat = entry['lat'];
+        lon = entry['lon'];
+        ip_obj.set('lat', lat);
+        ip_obj.set('lon', lon);
+        // ips[ ip ]['ll'] = [lat,lon];
+        var ll_str = [lat,lon].join('|');
+        if ( ll_str in MARKERS_BY_LL ) {
+            var mark_info = MARKERS_BY_LL[ ll_str ];
+            mark_info['ips'].push( ip );
+        } else {
+            var this_mark= L.marker([entry['lat'],entry['lon']], {icon: nameIcon}).addTo(map);
+            var mark_info = {
+                'ips': [ ip ],
+                'marker': this_mark,
+            };
+            MARKERS_BY_LL[ ll_str ] = mark_info;
+            //needs to be generated 'on click' not at bind time so this wont' work:
+            this_mark.on('click', function(evt) {
+                popup_for_ll( ll_str );
+            });
+            this_mark.setOpacity( 0.5 );
+            ip_obj.set('marker', this_mark);
+        }
+    }
+/*
+    } else if ( 'area' in data ) {
+        geo_area = data['area'];
+        var ar = L.geoJson(geo_area).addTo(map);
+        // centroid?
+    } else {
+*/
+
+    for (trace_id in ip_obj.get('traces') ) {
+        redraw_trace( trace_id );
+    }
+}
+
+function init_map() {
+    map = L.map('map');
+
+    var osmUrl='http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    var osmAttrib='Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors';
+
+    var mapqUrl='http://otile1.mqcdn.com/tiles/1.0.0/map/{z}/{x}/{y}.jpg';
+
+    //var osm = new L.TileLayer(osmUrl, {attribution: osmAttrib});
+    var osm = new L.TileLayer(mapqUrl, {attribution: osmAttrib});
+
+    map.setView([51.505, -0.09], 2);
+    map.addLayer(osm);
+}
+
+function shuffle(array) {
+  var m = array.length, t, i;
+
+  // While there remain elements to shuffle…
+  while (m) {
+
+    // Pick a remaining element…
+    i = Math.floor(Math.random() * m--);
+
+    // And swap it with the current element.
+    t = array[m];
+    array[m] = array[i];
+    array[i] = t;
+  }
+
+  return array;
+}
+
+function show_trace_meta( data ) {
+    var dmm = $('#dropdown-menu-msms');
+    var probe_cnt = data['probes'].length;
+    var probes_q = '';
+    if ( probe_cnt > MAX_PROBE_COUNT ) {
+        var alert_msg = "probe count too high for viz ({0}), only fetching data for {1} (picked randomly)".format( probe_cnt, MAX_PROBE_COUNT );
+        alert( alert_msg );
+        var prb_list = [];
+        data['probes'] = shuffle( data['probes'] );
+        for (var idx=0; idx< MAX_PROBE_COUNT; idx++) {
+            prb_list.push( data['probes'][idx]['id'] );
+        }
+        probes_q = '&probes=' + prb_list.join(',');
+    }
+    var data_url='';
+    var data_desc='';
+    var start='';
+    var stop='';
+    if ( data['is_oneoff'] == true ) {
+        start=data['start_time'];
+        stop=data['stop_time'];
+        data_desc = "<li><a href='#'>{0} ({1}) {2} probes</a></li>".format( data['msm_id'], data['description'], probe_cnt )
+    } else {
+        stop = data['stop_time'];
+        if ( stop == null ) { 
+            d = new Date().getTime(); d /= 1000; stop = Math.floor(d) 
+        }
+        start = stop - data['interval'];
+        data_desc = "<li><a href='#'>{0} ({1}) {2} probes</a> (latest)</li>".format( data['msm_id'], data['description'], probe_cnt )
+    }
+    var data_url  = 'msmfetch.json?msm_id={0}&start={1}&stop={2}{3}'.format( data['msm_id'], start, stop, probes_q );
+    $.ajax({
+        url: data_url,
+        type: 'GET',
+        dataType: 'json',
+        async: true,
+        context: {
+            'dmm': dmm,
+            'data_desc': data_desc,
+            'msm_id': data['msm_id'],
+            'msm_desc': data['description'],
+            'probe_cnt': probe_cnt,
+            'start': start,
+            'stop': stop
+        },
+        error: function(xhr,status,errcode) {
+            if ( xhr.status == 401 ) {
+                alert('Authentication required for this measurement. Most likely the measurement is not "public". Go into the UDM detail page and make the measurement "public" via settings and try again');
+            } else {
+                alert('Error getting trace data');
+            }
+        },
+        success: show_traces
+    });
+}
+
+function add_trace_js() {
+    $('#add-trace').on('submit',function(ev) {
+        ev.preventDefault();
+        var msm_id = $('#add-trace-msm-id').val();
+        var url="https://atlas.ripe.net/api/v1/measurement/{0}/?callback=callback&fields=is_oneoff,msm_id,probes,description,interval,start_time,stop_time".format( msm_id );
+        $.ajax({
+            url: url,
+            type: 'GET',
+            jsonp: 'callback',
+            dataType: 'jsonp',
+            async: true,
+            success: show_trace_meta
+        });
+    });
+}
+
+function init_catcomplete() {
+    $.widget( "custom.catcomplete", $.ui.autocomplete, {
+        _renderMenu: function( ul, items ) {
+            var that = this,
+                currentCategory = "";
+            $.each( items, function( index, item ) {
+                if ( item.category != currentCategory ) {
+                ul.append( "<li class='ui-autocomplete-category'>" + item.category + "</li>" );
+                currentCategory = item.category;
+                }
+                that._renderItemData( ul, item );
+            });
+        }
+    });
+}
+
+function show_help_dialog() {
+    var dial = $("<div title='Help Text' class='help_dialog'>");
+    dial.append( $("#help_dialog_content").html() );
+    $('body').append(dial);
+    dial.dialog({minWidth: 800});
+    //help_dialog_content
+}
+
+$(document).ready(function() {
+   $('#show_help_dialog').click( show_help_dialog );
+   init_catcomplete();
+   init_map();
+   add_trace_js();
+});
+
+
+ </script>
+</head>
+<body>
+<!-- pre_load images -->
+<img src="/static/load.gif" style="display:none" />
+<img src="/static/scanner.gif" style="display:none" />
+
+<nav class="navbar navbar-default" role="navigation">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="#">OpenIPMap</a>
+    </div>
+
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      <form id="add-trace" class="navbar-form navbar-left" role="add">
+        <div class="form-group">
+          <input id="add-trace-msm-id" type="text" class="form-control" placeholder="Add msm_id">
+        </div>
+        <button type="submit" class="btn btn-default">Add msm</button>
+      </form>
+      <ul class="nav navbar-nav navbar-left dropdown">
+        <li><a href="#" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-delay="1000" data-close-others="false">Msm</a>
+           <ul class="dropdown-menu" id="dropdown-menu-msms">
+           </ul>
+        </li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li><a href="#">User: {{ user.first_name }} {{ user.last_name }}</a></li>
+        <li><a href="#" id='show_help_dialog'>Help</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+<div id="map"></div>
+<div id="trace_info"></div>
+
+</body>
+</html>
