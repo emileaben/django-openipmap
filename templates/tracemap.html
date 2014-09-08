@@ -21,8 +21,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.1.2/backbone-min.js"></script>
 <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.form/3.49/jquery.form.min.js"></script> -->
 
- <script src="/static/leaflet.js"></script>
- <link rel="stylesheet" href="/static/leaflet.css" />
+ <script src="//cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet.js"></script>
+ <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet.css" />
 
  <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
  <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
@@ -175,7 +175,7 @@ will update and reflect the user-provided input.
   city: <%= s['name'] %> </br>
   weight: <%= s['weight'] %> </br>
   <% }; // end suggestions %>
-  location: <form class="hostname_by_ajax" id="hostname_by_ajax_<%= ip %>" action="/routergeoloc/api/my_hostname_rules/" method="POST">
+  location: <form class="hostname_by_ajax" id="hostname_by_ajax_<%= ip %>" action="api/my_hostname_rules/" method="POST">
     {% csrf_token %}
     <input id="georesult" name="georesult" type="text" value="" />
     <input id="hostname" name="hostname" type="hidden" value="<%= hostname %>" />
@@ -475,7 +475,7 @@ var IpTraceTableView = Backbone.View.extend({
             ev.preventDefault();
             $.ajax({
                 type: 'POST',
-                url: '/routergeoloc/api/my_hostname_rules/',
+                url: 'api/my_hostname_rules/',
                 data: $(this).serialize(),
                 success: function(data) {
                     that.model.change_loc_by_crowdsource( data );
@@ -483,6 +483,7 @@ var IpTraceTableView = Backbone.View.extend({
                 error: function(data) {
                     button.css('display','inline');
                     img.css('display','none');
+                    console.log( data );
                     alert("crowdsourced geoloc submission failed!");
                 }
             });
@@ -935,7 +936,7 @@ function insert_ip_loc_form( elt_txt ) {
         ev.preventDefault();
         $.ajax({
             type: 'POST',
-            url: '/routergeoloc/api/my_hostname_rules/',
+            url: 'api/my_hostname_rules/',
             data: $(this).serialize(),
             success: function(data) {
                 ip_obj.change_loc_by_crowdsource( data );
@@ -985,7 +986,7 @@ function decorate_location_for_ip( ip ) {
 
     var form = $("<form/>",{
         method: 'POST',
-        action: '/routergeoloc/api/my_hostname_rules/'
+        action: 'api/my_hostname_rules/'
     });
     form.addClass('ui-widget');
     form.addClass('location-in-trace-text-form');
@@ -1241,7 +1242,7 @@ function removegeoloc_from_hostname( ip, hostname ) {
     ip_obj.set('suggestions',[]);
     ip_obj.remove_geoloc();
     // now ajax post this assertion
-    $.post('/routergeoloc/api/my_hostname_rules/',
+    $.post('api/my_hostname_rules/',
         {
             csrfmiddlewaretoken: '{{ csrf_token }}',
             hostname: hostname,
