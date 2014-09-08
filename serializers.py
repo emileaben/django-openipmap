@@ -23,7 +23,7 @@ class IPRuleSerializer(serializers.ModelSerializer):
     #)
     class Meta:
         model = IPRule
-        fields = ('ip','georesult','confidence','user','lat','lon','canonical_georesult')
+        fields = ('ip','created','georesult','confidence','user','lat','lon','canonical_georesult')
         read_only_fields = fields
 
 class MyIPRuleSerializer(serializers.ModelSerializer):
@@ -35,17 +35,17 @@ class MyIPRuleSerializer(serializers.ModelSerializer):
     #)
     class Meta:
         model = IPRule
-        fields = ('ip','georesult','confidence','canonical_georesult','lat','lon')
+        fields = ('ip','created','georesult','confidence','canonical_georesult','lat','lon')
         read_only_fields = ('canonical_georesult','lat','lon')
 
 class HostnameRuleSerializer(serializers.ModelSerializer):
     class Meta:
         model = HostnameRule
-        fields = ('hostname','georesult','canonical_georesult','lat','lon','confidence','user')
+        fields = ('hostname','created','georesult','canonical_georesult','lat','lon','confidence','user')
         read_only_fields = fields
 
 class MyHostnameRuleSerializer(serializers.ModelSerializer):
     class Meta:
         model = HostnameRule
-        fields = ('hostname','georesult','canonical_georesult','lat','lon','confidence')
+        fields = ('hostname','created','georesult','canonical_georesult','lat','lon','confidence')
         read_only_fields = ('canonical_georesult','lat','lon')
