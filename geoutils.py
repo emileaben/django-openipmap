@@ -6,7 +6,6 @@ class memoize(dict):
         self.func = func
 
     def __call__(self, *args):
-        print "called %s(%s)" % (self.func.func_name, args)
         return self[args]
 
     def __missing__(self, key):
