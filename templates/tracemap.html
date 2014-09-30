@@ -1,4 +1,5 @@
  <!DOCTYPE html>
+{% load staticfiles %}
 <html>
 <head>
  <meta charset="utf-8">
@@ -28,6 +29,9 @@
  <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
 <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-hover-dropdown/2.0.2/bootstrap-hover-dropdown.js"></script> -->
  <link rel="stylesheet" href="//code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css">
+
+   <!-- svg arrows -->
+   <script src="{% static "leaflet.textpath.js" %}"></script>
 
 <style>
 
@@ -731,44 +735,6 @@ var Trace = Backbone.Model.extend({
             trace_view = new TraceView({ model: this });
             trace_view.render();
         }
-/*
-        var hops = _.keys( trace_obj );
-        var elt_id = "trace-table-{0}-{1}-{2}".format( trace_id_parts[0], trace_id_parts[1], trace_id_parts[2] );
-        var root_id = "dialog-{0}-{1}-{2}".format( trace_id_parts[0], trace_id_parts[1], trace_id_parts[2] );
-
-        var root_elt = $('#{0}'.format(root_id) )
-        if ( root_elt.length == 0 ) { 
-            root_elt = $('<div id="{0}" title="msm:{1} prb:{2} ts:{3}"></div>'.format( root_id, trace_id_parts[0], trace_id_parts[1], ts2iso( trace_id_parts[2] )  ) );
-        }
-        root_elt.data('trace_obj', trace_obj);
-
-        var trace_table = $('#{0}'.format(elt_id));
-        if ( trace_table.length == 0 ) {
-            max_hop = _.max( _.map(hops, function(x){ return parseInt(x); }) );
-            var txt = _.template( $('#trace-table-template').html(),
-                { 'trace_obj': trace_obj,
-                'id': trace_id,
-                'elt_id': elt_id,
-                'hops': hops,
-                'max_hop': max_hop
-                }
-            );
-            root_elt.html( txt );
-            root_elt.dialog();
-        }
-        // now it's bound we can define events on 'txt'
-        $('.trace-table-ip-host').each(function(idx,elt) {
-            insert_ip_hostname( elt );
-        });
-        $('.trace-table-ip-loc').each(function(idx,elt) {
-            insert_ip_loc_form( elt );
-        });
-        var table_width=$( '#{0}'.format(elt_id) ).outerWidth();
-        root_elt.dialog("option", "width", table_width+5 );
-        root_elt.on( "dialogclose", function( ev, ui ) {
-            ev.target.remove();
-        });
-*/
     },
 });
 var TraceListCollection = Backbone.Collection.extend({
@@ -1201,6 +1167,11 @@ function redraw_trace( trace_id ) {
                             pl_options['dashArray'] = "4, 8";
                         }
                         var pl = new L.Polyline([p1,p2], pl_options).addTo(map);
+                        pl.setText(' \u25BA ',
+                             { end: true,
+                               offset: 4
+                             }
+                        );
                         t.get('ui_segments').push( pl );
                         pl.on('mouseover', function(evt) {
                             var t = TraceList.get( trace_id );
