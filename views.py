@@ -246,9 +246,7 @@ def ipmap(request):
 
 @login_required
 def tracemap(request,**kwargs):
-    template='tracemap.html'
-    if 'is_test' in kwargs:
-        template='tracemap-test.html'
+    template='oim/tracemap.html'
     #try: msm_id = int(request.GET.get('msm_id'))
     #except:
     #    ##TODO page with suggestions for msm_ids
