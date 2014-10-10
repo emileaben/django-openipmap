@@ -279,10 +279,8 @@ var CrMarker = Backbone.Model.extend({
     remove_ip: function( ip ) {
         // NEEDS TO BE DONE SOMETIME. FOR NOW NOT THAT IMPORTANT
         console.log("TODO Marker.remove_ip() to be implemented");
-        console.log( "pre", this.get('ips') );
         var ips = this.get('ips');
         this.set('ips', _.without(ips, ip));
-        console.log( "post", this.get('ips') );
         if ( ips.length < 1 ) {
             var marker = this.get('marker');
             map.removeLayer( marker );
@@ -691,9 +689,7 @@ var Trace = Backbone.Model.extend({
                 var ip_obj = IpList.get( ip );
                 var traces = ip_obj.get('traces');
                 if ( _.keys( traces ).length == 0 ) {
-                    console.log( "PRE", IpList.length );
                     IpList.remove( ip );
-                    console.log( "POST", IpList.length );
                 }
             }
         }
@@ -747,6 +743,43 @@ var TraceListCollection = Backbone.Collection.extend({
     }
 });
 var TraceList = new TraceListCollection();
+
+// set state for the page here
+var PageStateModel = Backbone.Model.extend({
+   defaults: {
+      'msm_ids': [],
+      'show_suggestions': true
+   },
+   initialize: function() {
+      this.on('change', function(model) {
+         this.rebuild_page_url();
+      });
+   },
+   state_from_page_url: function() {
+      var map = {};
+      window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi, function (m, key, value) {
+          map[key] = value;
+      });
+      if (map.hasOwnProperty('msm_ids')) { 
+         msm_ids = map['msm_ids'].split('_');
+           _.each(msm_ids, function(msm_id) {
+               add_measurement_to_ui_cb( msm_id );
+         });
+      }
+   },
+   rebuild_page_url: function() {
+      var msm_id_str = this.get('msm_ids').join('_');
+      var suggest_str = this.get('show_suggestions') ? '1' : '0';
+      var query_string = jQuery.param({
+         msm_ids: msm_id_str, 
+         show_suggestions: suggest_str 
+      });
+      new_url = window.location.href.split(/[\?\#]/)[0] + '?' + query_string;
+      window.history.pushState(query_string, document.title, new_url);
+   }
+});
+var PageState = new PageStateModel();
+
 
 prbs={};
 var nameIcon = L.divIcon({className: 'name-icon'});
@@ -1017,8 +1050,9 @@ function decorate_hostname_for_ip( ip ) {
     return html;
 }
 
-
 function show_traces( data ) {
+    // add to page state
+    PageState.set('msm_ids', PageState.get('msm_ids').concat( this.msm_id ));
     var desc = $( "<li><a href='#'>{0} <b>{1}</b> {2}prbs {3}-{4}</a></li>".format(
         this.msm_id,
         this.msm_desc,
@@ -1402,19 +1436,26 @@ function show_trace_meta( data ) {
     });
 }
 
-function add_trace_js() {
+function add_measurement_to_ui_cb( msm_id ) {
+   var url="https://atlas.ripe.net/api/v1/measurement/{0}/?callback=callback&fields=is_oneoff,msm_id,probes,description,interval,start_time,stop_time".format( msm_id );
+   $.ajax({
+      url: url,
+      type: 'GET',
+      jsonp: 'callback',
+      dataType: 'jsonp',
+      async: true,
+      success: show_trace_meta
+   });
+}
+
+function add_traces() {
+    // add traces and other state from URL / permalink
+    PageState.state_from_page_url();
+    // add traces when user submits
     $('#add-trace').on('submit',function(ev) {
         ev.preventDefault();
         var msm_id = $('#add-trace-msm-id').val();
-        var url="https://atlas.ripe.net/api/v1/measurement/{0}/?callback=callback&fields=is_oneoff,msm_id,probes,description,interval,start_time,stop_time".format( msm_id );
-        $.ajax({
-            url: url,
-            type: 'GET',
-            jsonp: 'callback',
-            dataType: 'jsonp',
-            async: true,
-            success: show_trace_meta
-        });
+        add_measurement_to_ui_cb( msm_id );
     });
 }
 
@@ -1446,7 +1487,7 @@ $(document).ready(function() {
    $('#show_help_dialog').click( show_help_dialog );
    init_catcomplete();
    init_map();
-   add_trace_js();
+   add_traces();
 });
 
 
