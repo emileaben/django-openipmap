@@ -760,11 +760,22 @@ var PageStateModel = Backbone.Model.extend({
       window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi, function (m, key, value) {
           map[key] = value;
       });
+      // msm_ids
       if (map.hasOwnProperty('msm_ids')) { 
          msm_ids = map['msm_ids'].split('_');
            _.each(msm_ids, function(msm_id) {
                add_measurement_to_ui_cb( msm_id );
          });
+      }
+      // show_suggestions
+      if (map.hasOwnProperty('show_suggestions')) {
+         if ( map['show_suggestions'] == 1 ) {
+            console.log('show_sug', true )
+            this.set('show_suggestions', true);
+         } else {
+            console.log('show_sug', false )
+            this.set('show_suggestions', false);
+         }
       }
    },
    rebuild_page_url: function() {
@@ -1308,7 +1319,9 @@ function show_ip( data ) {
         ip_obj.set('lat',lat);
         ip_obj.set('lon',lon);
         mark=create_marker_icon(lat,lon,ip_obj,dnslocIcon);
-    } else if ( data['suggestions'] instanceof Array && data['suggestions'].length > 0 ) {
+    } else if ( data['suggestions'] instanceof Array 
+             && data['suggestions'].length > 0 
+             && PageState.get('show_suggestions') ) {
         entry = data['suggestions'][0]; // take the first by default
         lat = entry['lat'];
         lon = entry['lon'];
