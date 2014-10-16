@@ -252,6 +252,7 @@ var ACTIVE_TRACE=null;
 var MAX_PROBE_COUNT=50;
 
 // TODO: store 'suggestions' markers as backbonejs things
+// these are the 'suggestion' markers
 var MARKERS_BY_LL={}; //markers keyed by lat/lon
 function markers_by_ll_remove_ip( ll_str, ip ) {
     var marker_info = MARKERS_BY_LL[ ll_str ];
@@ -266,8 +267,22 @@ function markers_by_ll_remove_ip( ll_str, ip ) {
     }
 }
 
+// store probe markers as a backbone collection
+var Probe = Backbone.Model.extend({
+   // Keyed by probe_id
+   defaults: {
+     'lat': null,
+     'lon': null,
+     'marker': null,
+     'traces': [] // traces associated with this probe in 'msm_id|prb_id|ts' format
+   }
+});
+var ProbeCollection = Backbone.Collection.extend({
+   model: Probe,
+});
+var ProbeList = new ProbeCollection();
 
-// store crowd markers as a backbone thing.
+// store markers for crowdsourced locs as a backbone thing.
 var CrMarker = Backbone.Model.extend({
     // Keyed by '<lat>|<lon>'
     defaults: {
@@ -630,6 +645,8 @@ var IpListCollection = Backbone.Collection.extend({
 });
 var IpList = new IpListCollection();
 
+
+
 function popup_for_ll( ll_str ) {
     var marker_info = MARKERS_BY_LL[ll_str];
     var ips = marker_info['ips'];
@@ -770,7 +787,6 @@ var PageStateModel = Backbone.Model.extend({
       // show_suggestions
       if (map.hasOwnProperty('show_suggestions')) {
          if ( map['show_suggestions'] == 1 ) {
-            console.log('show_sug', true )
             this.set('show_suggestions', true);
          } else {
             console.log('show_sug', false )
@@ -1073,7 +1089,43 @@ function show_traces( data ) {
     ) );
     this.dmm.append( desc );
     this.dmm.show();
-    // add to TraceList
+    // add probes
+    for (p_idx in data['prb']) {
+        var probe_id = parseInt( p_idx );
+        var prb_obj = data['prb'][ p_idx ];
+        var probeX = ProbeList.get( probe_id ); 
+        if ( probeX === undefined ) {
+            var lat = prb_obj['lat'];
+            var lon = prb_obj['lon'];
+            var prb_mark=L.marker([lat,lon],{icon: prbIcon}).addTo(map);
+            ProbeList.add({
+               'id': probe_id,
+               'lat': lat,
+               'lon': lon,
+               'marker': prb_mark,
+               'traces': []
+            });
+            // hmm, need to stash the prb_id in the marker object ...
+            // must be a better way. 
+            prb_mark.____prb_id = probe_id;
+            var probeY = ProbeList.get( probe_id );
+            prb_mark.on('click',function(evt) {
+               // on multiple traces per probe this will pop them all up
+               // may be nicer to give people an option to pick one if there is > 1
+               var this_probe = ProbeList.get( this.____prb_id );
+               var traces = this_probe.get('traces');
+               for (t_idx in traces ) {
+                  var trace_id = traces[t_idx];
+                  TraceList.unhighlite_all();
+                  var t = TraceList.get( trace_id );
+                  t.set('is_active',true);
+                  t.highlite();
+                  t.showAsText( $('#trace_info') );
+               }
+            });
+        }
+    }
+    // add traces to TraceList , and associate with probes
     for (trace_id in data['trs']) {
         // trace_obj = data['trs'][trace_id]['trace'];
         trace_obj = data['trs'][trace_id];
@@ -1084,13 +1136,13 @@ function show_traces( data ) {
         if ( _.has(data,'dst_name') && _.has( data['dst_name'], trace_id ) ) {
             this_trace.set('dst_name', data['dst_name'][trace_id] );
         }
-    }
-    for (p_idx in data['prb']) {
-        var p = data['prb'][ p_idx ];
-        var lat = p['lat'];
-        var lon = p['lon'];
-        var mark=L.marker([lat,lon],{icon: prbIcon}).addTo(map);
-        // code to show traces per probe
+        // traceid contains <msmid>|prbid|ts tupples
+        var trace_id_parts = trace_id.split('|')
+        var probe_id = parseInt(trace_id_parts[1]);
+        var probe = ProbeList.get( probe_id );
+        var trace_list = probe.get('traces');
+        trace_list.push( trace_id );
+        probe.set('traces', trace_list);
     }
     // traces = data['trs'];
     // ips = data['ips'];
