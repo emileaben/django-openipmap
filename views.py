@@ -118,6 +118,17 @@ def msmfetch(request):
     except:
         return HttpResponse("no msm_id")
 
+    ## get msm_info   
+    ## not used yet, but msm_info could be used to work on start/stop/interval/probes etc.
+    msm_info_url = "https://atlas.ripe.net/api/v1/measurement/%s/?format=json" % ( msm_id )
+    try:
+        info_fh = urllib.urlopen( msm_info_url )
+    except Exception as err:
+        return HttpResponse(status=err[1])
+    info_json = info_fh.read()
+    msm_info = json.loads( info_json )
+    ### here
+
     limit=4
     try: limit = int(request.GET.get('limit'))
     except: pass
@@ -138,7 +149,9 @@ def msmfetch(request):
     #msm_url = "https://atlas.ripe.net/api/v1/measurement/%d/result/?start=%d&stop=%d&format=txt&limit=%d" % ( int(msm_id), start_t, end_t, limit )
     ### limit doesn't work?
     ####TODO use latest? https://atlas.ripe.net/api/v1/measurement-latest/1636208/
-    msm_url = "https://atlas.ripe.net/api/v1/measurement/%d/result/?start=%d&stop=%d&limit=%d" % ( msm_id, start, stop, limit )
+    #OLD# msm_url = "https://atlas.ripe.net/api/v1/measurement/%d/result/?start=%d&stop=%d&limit=%d" % ( msm_id, start, stop, limit )
+    version_count = 1
+    msm_url = "https://atlas.ripe.net/api/v1/measurement-latest/%s/?versions=%s" % ( msm_id, version_count )
     if probes:
         msm_url += "&prb_id=%s" % ( probes )
     try:
@@ -157,10 +170,11 @@ def msmfetch(request):
         'err': []
     } # data struct
     d['msm_url'] = msm_url
-    for msm in data:
+    for key,msm_list in data.items():
         try:
+            msm = msm_list[0]
             ts = msm['timestamp']
-            prb_id = int(msm['prb_id'])
+            prb_id = int(key)
             if not prb_id in d['prb']:
                 try:
                     p = Probe.objects.get(id=prb_id)
