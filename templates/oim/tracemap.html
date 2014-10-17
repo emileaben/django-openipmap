@@ -1450,7 +1450,7 @@ function show_trace_meta( data ) {
     var probe_cnt = data['probes'].length;
     var probes_q = '';
     if ( probe_cnt > MAX_PROBE_COUNT ) {
-        var alert_msg = "probe count too high for viz ({0}), only fetching data for {1} (picked randomly)".format( probe_cnt, MAX_PROBE_COUNT );
+        var alert_msg = "probe count too high for viz ({0}), only fetching data for {1} (picked randomly)\nThis may take a while ....".format( probe_cnt, MAX_PROBE_COUNT );
         alert( alert_msg );
         var prb_list = [];
         data['probes'] = shuffle( data['probes'] );
