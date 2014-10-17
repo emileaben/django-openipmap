@@ -119,14 +119,14 @@ def msmfetch(request):
         return HttpResponse("no msm_id")
 
     ## get msm_info   
-    ## not used yet, but msm_info could be used to work on start/stop/interval/probes etc.
-    msm_info_url = "https://atlas.ripe.net/api/v1/measurement/%s/?format=json" % ( msm_id )
-    try:
-        info_fh = urllib.urlopen( msm_info_url )
-    except Exception as err:
-        return HttpResponse(status=err[1])
-    info_json = info_fh.read()
-    msm_info = json.loads( info_json )
+    ##### not used yet, but msm_info could be used to work on start/stop/interval/probes etc.
+    #msm_info_url = "https://atlas.ripe.net/api/v1/measurement/%s/?format=json" % ( msm_id )
+    #try:
+    #    info_fh = urllib.urlopen( msm_info_url )
+    #except Exception as err:
+    #    return HttpResponse(status=err[1])
+    #info_json = info_fh.read()
+    #msm_info = json.loads( info_json )
     ### here
 
     limit=4
@@ -142,11 +142,8 @@ def msmfetch(request):
     except: pass
 
     probes=''
-    probe_set = set()
     try: 
       probes = request.GET.get('probes')
-      for p in probes.split(','):
-         probe_set.add( int( p ) )
     except: pass
 
     
@@ -158,15 +155,16 @@ def msmfetch(request):
     #OLD# msm_url = "https://atlas.ripe.net/api/v1/measurement/%d/result/?start=%d&stop=%d&limit=%d" % ( msm_id, start, stop, limit )
     version_count = 1
     msm_url = "https://atlas.ripe.net/api/v1/measurement-latest/%s/?versions=%s" % ( msm_id, version_count )
-    ### THIS DOESN"T WORK IN THE measurement-latest API:
-    #if probes:
-    #    #msm_url += "&prb_id=%s" % ( probes )
-    #    msm_url += "&probes=%s" % ( probes )
+    if probes:
+        msm_url += "&probes=%s" % ( probes )
     try:
         url_fh = urllib.urlopen( msm_url )
     except Exception as err:
         # err[1] will have the HTTP status code
-        return HttpResponse(status=err[1])
+        if isinstance( err[1], int):
+           return HttpResponse(status=err[1])
+        else:
+           return HttpResponse(status=500)
     msm_json = url_fh.read()
     data = json.loads(msm_json)
     d = {
@@ -183,11 +181,6 @@ def msmfetch(request):
             msm = msm_list[0]
             ts = msm['timestamp']
             prb_id = int(key)
-            if len( probe_set ) > 0 and not prb_id in probe_set:
-               print "probe_set %s : id: %s" % ( probe_set, prb_id )
-               continue
-            else:
-               print "ID: %s" % ( prb_id )
             if not prb_id in d['prb']:
                 try:
                     p = Probe.objects.get(id=prb_id)
