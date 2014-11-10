@@ -249,7 +249,7 @@ if (!String.prototype.format) {
 
 var map;
 var ACTIVE_TRACE=null;
-var MAX_PROBE_COUNT=50;
+var MAX_PROBE_COUNT=51;
 
 // TODO: store 'suggestions' markers as backbonejs things
 // these are the 'suggestion' markers
@@ -785,11 +785,12 @@ var PageStateModel = Backbone.Model.extend({
          });
       }
       // show_suggestions
+      // TODO: have this option reflect in UI, not just query parameters
       if (map.hasOwnProperty('show_suggestions')) {
          if ( map['show_suggestions'] == 1 ) {
             this.set('show_suggestions', true);
          } else {
-            console.log('show_sug', false )
+            //console.log('show_sug', false )
             this.set('show_suggestions', false);
          }
       }
@@ -1140,9 +1141,11 @@ function show_traces( data ) {
         var trace_id_parts = trace_id.split('|')
         var probe_id = parseInt(trace_id_parts[1]);
         var probe = ProbeList.get( probe_id );
-        var trace_list = probe.get('traces');
-        trace_list.push( trace_id );
-        probe.set('traces', trace_list);
+        if ( probe !== undefined ) {
+            var trace_list = probe.get('traces');
+            trace_list.push( trace_id );
+            probe.set('traces', trace_list);
+        }
     }
     // traces = data['trs'];
     // ips = data['ips'];
@@ -1423,7 +1426,7 @@ function init_map() {
     //var osm = new L.TileLayer(osmUrl, {attribution: osmAttrib});
     var osm = new L.TileLayer(mapqUrl, {attribution: osmAttrib});
 
-    map.setView([51.505, -0.09], 2);
+    map.setView([20, 0], 3);
     map.addLayer(osm);
 }
 
