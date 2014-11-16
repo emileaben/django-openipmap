@@ -765,7 +765,8 @@ var TraceList = new TraceListCollection();
 var PageStateModel = Backbone.Model.extend({
    defaults: {
       'msm_ids': [],
-      'show_suggestions': true
+      'show_suggestions': true,
+      'max_probes': undefined
    },
    initialize: function() {
       this.on('change', function(model) {
@@ -794,14 +795,22 @@ var PageStateModel = Backbone.Model.extend({
             this.set('show_suggestions', false);
          }
       }
+      // max_probes
+      // if max_probes is set, don't show warning messages anymore, just select this no. from a measurement
+      if (map.hasOwnProperty('max_probes')) {
+         var max_probes = parseInt( map['max_probes'] );
+         if ( max_probes > 0) {
+            this.set('max_probes', max_probes);
+         }
+      }
    },
    rebuild_page_url: function() {
-      var msm_id_str = this.get('msm_ids').join('_');
-      var suggest_str = this.get('show_suggestions') ? '1' : '0';
-      var query_string = jQuery.param({
-         msm_ids: msm_id_str, 
-         show_suggestions: suggest_str 
-      });
+      var max_probes = this.get('max_probes');
+      var params = {};
+      params['msm_ids'] = this.get('msm_ids').join('_');
+      params['show_suggestions'] = this.get('show_suggestions') ? '1' : '0';
+      if ( max_probes !== undefined ) { params['max_probes'] = max_probes }
+      var query_string = jQuery.param( params );
       new_url = window.location.href.split(/[\?\#]/)[0] + '?' + query_string;
       window.history.pushState(query_string, document.title, new_url);
    }
@@ -1452,12 +1461,15 @@ function show_trace_meta( data ) {
     var dmm = $('#dropdown-menu-msms');
     var probe_cnt = data['probes'].length;
     var probes_q = '';
-    if ( probe_cnt > MAX_PROBE_COUNT ) {
-        var alert_msg = "probe count too high for viz ({0}), only fetching data for {1} (picked randomly)\nThis may take a while ....".format( probe_cnt, MAX_PROBE_COUNT );
-        alert( alert_msg );
+    var max_probes = PageState.get('max_probes') || MAX_PROBE_COUNT;
+    if ( probe_cnt > max_probes ) {
+        if (PageState.get('max_probes') === undefined) {
+           var alert_msg = "probe count too high for viz ({0}), only fetching data for {1} (picked randomly)\nThis may take a while ....".format( probe_cnt, MAX_PROBE_COUNT );
+           alert( alert_msg );
+        } 
         var prb_list = [];
         data['probes'] = shuffle( data['probes'] );
-        for (var idx=0; idx< MAX_PROBE_COUNT; idx++) {
+        for (var idx=0; idx< max_probes; idx++) {
             prb_list.push( data['probes'][idx]['id'] );
         }
         probes_q = '&probes=' + prb_list.join(',');
