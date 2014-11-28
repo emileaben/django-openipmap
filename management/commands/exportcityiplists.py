@@ -33,5 +33,4 @@ class Command(BaseCommand):
             for ipm in ipm_list:
                city_ips.add( ipm.ip )
          data_out[tc] = list( city_ips )
-         print "%s %s" % (tc, city_ips )
       print json.dumps( data_out )
