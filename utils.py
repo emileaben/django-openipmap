@@ -43,7 +43,7 @@ def create_ipmeta( ip_addr ): ## not used?
 def do_dns_loc_lookup( ip_addr ):
     dnsloc = None
     try:
-      loc_resolve = dns.resolver.query( self.hostname, 'LOC')
+      loc_resolve = dns.resolver.query( ip_addr , 'LOC')
       dnsloc = str( loc_resolve[0] )
     except:
       pass
