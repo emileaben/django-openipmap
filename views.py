@@ -246,7 +246,7 @@ def ipmeta(request):
     ## normalize
     ip_addr = str( ipaddress.ip_address( ip_addr ) )
     ## lookup
-    ipm,is_created = IPMeta.objects.get_or_create(ip=ip_addr)
+    ipm,is_created = IPMeta.objects.get_or_create(ip=ip_addr,invalidated=None)
     info = ipm.info2json()
     return HttpResponse(
         json.dumps(info, indent=2),
