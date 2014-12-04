@@ -288,7 +288,9 @@ class Geoalias(models.Model):
 
 class IPMeta(models.Model):
     ip = models.GenericIPAddressField( db_index=True )
-    created = models.DateTimeField(auto_now_add=True)
+    created = models.DateTimeField( auto_now_add=True )
+    invalidated = models.DateTimeField( blank=True, null=True, db_index=True )
+    last_updated = models.DateTimeField(auto_now=True)
     dnsloc = models.CharField( max_length=256, blank=True, null=True )
     hostname = models.CharField( max_length=256, blank=True, null=True )
     ##is_anycast = models.NullBooleanField( blank=True, null=True )
@@ -296,6 +298,7 @@ class IPMeta(models.Model):
     psl = PublicSuffixList()
 
     def save(self, **kwargs):
+        ''' IPMeta save method, does lookups if object isn't saved yet '''
         if not self.id:
             ## do dnsloc and hostname lookups
             try:
