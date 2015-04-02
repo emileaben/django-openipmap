@@ -237,6 +237,21 @@ def msmfetch(request):
         content_type="application/json"
     )
 
+def iprtt(request):
+    '''
+     accepts tuples of q=<ip>|<lat>|<lon>|<min_rtt>
+     returns same as ipmeta, but now with geoconstraints applied
+    '''
+    ## TODO nicer API for this
+    try: 
+        iplatlonrtt = request.GET.get('q')
+        ip,lat,lon,min_rtt = iplatlonrtt.split('|')
+    except: return HttpResponse("need q query parameter and ip|lat|lon|min_rtt separated by '|'")
+    return HttpResponse(
+        "%s %s %s %s" % ( ip,lat,lon,min_rtt ),
+        content_type="text/html"
+    )
+
 def ipmeta(request):
     ## find all related info for a list of IP addresses
     # returns a dictionary with the associated info
