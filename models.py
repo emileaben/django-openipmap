@@ -316,7 +316,22 @@ class IPMeta(models.Model):
                     pass
         super(self.__class__, self).save(**kwargs)
 
-    def info2json(self):
+    def info2json(self,**kwargs):
+        '''
+        convert all info about this IP into a json structure.
+        optional arguments accepted are
+           'lat': latitude, to georestrict by
+           'lon': longitude, to georestrict by
+           'min_rtt': rtt, to georestrict by
+        '''
+        do_rtt_constraint=False
+        try:
+           lat=kwargs['lat']
+           lon=kwargs['lon']
+           min_rtt=kwargs['min_rtt']
+           do_rtt_constraint=True
+        except: pass
+
         DNSLOC_WEIGHT=0.95
         HOSTNAME_WEIGHT=0.90
         # 0  1  2      3 4 5  7     7
@@ -348,14 +363,16 @@ class IPMeta(models.Model):
         #    info['area'] = json.loads( gc[0].area.geojson )
         ## add a suggestions array that contains the ordered list of suggested lat/lon
         suggestions = []
-        name2loc = self.name2loc()
+        name2loc = self.name2loc(**kwargs)
         if 'dnsloc' in info:
-            suggestions.append({
-                'lat': info['dnsloc']['lat'],
-                'lon': info['dnsloc']['lon'],
-                'reason': 'dnsloc',
-                'weight': DNSLOC_WEIGHT,
-            });
+            if not do_geoloc_constraint or openipmap.geoutils.can_one_travel_distance_in_rtt( lat, lon, info['dnsloc']['lat'], info['dnsloc']['lon'], min_rtt ):
+               # only add this if this is possible RTTwise
+               suggestions.append({
+                   'lat': info['dnsloc']['lat'],
+                   'lon': info['dnsloc']['lon'],
+                   'reason': 'dnsloc',
+                   'weight': DNSLOC_WEIGHT,
+               });
         total_pop = 0;
         for n in name2loc:
             total_pop += n['pop']
@@ -372,10 +389,24 @@ class IPMeta(models.Model):
         info['crowdsourced'] = crowdsourced
         return info
 
-    def name2loc(self, poly_geoconstraint=None):
-        '''try to figure out loc, based on name'''
+    def name2loc(self, poly_geoconstraint=None, **kwargs):
+        '''
+           try to figure out loc, based on name
+           optional arguments accepted are
+             'lat': latitude, to georestrict by
+             'lon': longitude, to georestrict by
+             'min_rtt': rtt, to georestrict by
+
+        '''
         ## TODO: add polygon confinement?
         nr_results=10 ## configurable?
+        do_rtt_constraint=False
+        try:
+           lat=kwargs['lat']
+           lon=kwargs['lon']
+           min_rtt=kwargs['min_rtt']
+           do_rtt_constraint=True
+        except: pass
 
         # this should be configurable/tags and/or have low confidence value
         tag_blacklist=set(['rev','cloud','clients','demarc','ebr','pool','bras','core','static','router','net','bgp','pos','out','link','host','infra','ptr','isp','adsl','rdns','tengig','tengige','tge','rtr','shared','red','access','tenge','gin','dsl','cpe'])
@@ -396,8 +427,11 @@ class IPMeta(models.Model):
             tokens = [t for t in tokens if not t in tag_blacklist]
 
         matches = {}
-        def add_to_matches( g, token, is_abbrev ):
+        def add_to_matches( g, token, is_abbrev, **kwargs ):
             if not g.loc.id in matches:
+                ## check if geoconstraints
+                if do_rtt_constraint and not openipmap.geoutils.can_one_travel_distance_in_rtt( lat, lon, g.loc.lat, g.loc.lon, min_rtt ):
+                    return
                 matches[g.loc.id] = {
                     'loc_id': g.loc.id,
                     'pop': g.loc.pop,
@@ -420,17 +454,17 @@ class IPMeta(models.Model):
 
         for t in tokens:
             for ga in Geoalias.objects.filter(word=t):
-                add_to_matches( ga, t, False )
+                add_to_matches( ga, t, False, **kwargs )
         if len( matches ) == 0:
             #print "little on strict match, trying like"
             for t in tokens:
-                ## 't' can't be anything but a-zA-Z so no SQL injection possible
+                ## 't' can't be anything but a-zA-Z so no SQL injection should be possible
                 sql_like_chars = '%%'.join( list( t ) )
                 sql_like_chars += '%%'
                 # 'a%m%s%'
                 sql = "SELECT id FROM openipmap_geoalias WHERE word LIKE '%s'" % ( sql_like_chars )
                 for ga in Geoalias.objects.raw( sql ):
-                    add_to_matches( ga, t, True )
+                    add_to_matches( ga, t, True, **kwargs )
         mk = sorted( matches.keys(), reverse=True, key=lambda x: matches[x]['pop'] )[0:nr_results] ## max 10
         result = []
         for m in mk:
