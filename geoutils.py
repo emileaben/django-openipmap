@@ -23,6 +23,8 @@ def loc_resolve( geocodable_string ):
     ## @@todo: make username configurable
     gn = geocoders.GeoNames(username="emileaben")
     locs = None
+    # remove '?' and ' ' from name (they can be used as meta-info in webforms)
+    geocodable_string = geocodable_string.lstrip(' ?')
     try:
         locs = gn.geocode( geocodable_string , exactly_one=False, timeout=3)
     except:
