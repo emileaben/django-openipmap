@@ -242,14 +242,24 @@ def iprtt(request):
      accepts tuples of q=<ip>|<lat>|<lon>|<min_rtt>
      returns same as ipmeta, but now with geoconstraints applied
     '''
-    ## TODO nicer API for this
+    ## TODO nicer API for this, merge with ipmeta api?
     try: 
         iplatlonrtt = request.GET.get('q')
         ip,lat,lon,min_rtt = iplatlonrtt.split('|')
-    except: return HttpResponse("need q query parameter and ip|lat|lon|min_rtt separated by '|'")
+        # normalise
+        ip = str( ipaddress.ip_address( ip ) )
+        lat = float( lat )
+        lon = float( lon )
+        min_rtt = float( min_rtt )
+        if min_rtt <= 0:
+           raise ValueError("min_rtt needs to be > 0")
+    except: return HttpResponse("need q query parameter and ip|lat|lon|min_rtt separated by '|', rtt > 0")
+    # lookup
+    ipm,is_created = IPMeta.objects.get_or_create(ip=ip,invalidated=None)
+    info = ipm.info2json(lat=lat,lon=lon,min_rtt=min_rtt)
     return HttpResponse(
-        "%s %s %s %s" % ( ip,lat,lon,min_rtt ),
-        content_type="text/html"
+        json.dumps(info, indent=2),
+        content_type="application/json"
     )
 
 def ipmeta(request):
