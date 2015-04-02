@@ -65,7 +65,7 @@ input { margin: 0px;}
 }
 
 .ip-loc-option-guess {
-    background-color: red;
+    background-color: orange;
 }
 
 
@@ -88,7 +88,7 @@ table,td,th {
 }
 
 .name-icon {
-    background: #f00;
+    background: #fa0;
     text-align:center;
     vertical-align:middle;
     border:1px solid #000;
@@ -149,13 +149,13 @@ measurement in RIPE Atlas you can put the traceroute measurement ID into this in
 <p>
 Once you submit a measurement the interface will fetch associated measurement data and will try to geolocate the IP addresses and
 put them on a world map. Sources of traceroutes will be shown in white, locations for which there is crowdsourced information will be 
-shown in green, and locations for which the system makes an educated guess are shown in red (note that these guesses can be wildly inaccurate
+shown in green, and locations for which the system makes an educated guess are shown in orange (note that these guesses can be wildly inaccurate
 at the moment). Nodes in blue are nodes that have DNS LOC records available.
 </p>
 If you click any of the links between geolocated nodes a dialog box will appear that shows the complete traceroute
 that this link is part of. This dialog box will contain normal traceroute information (hop,IP,ASN,hostname,RTTs), and also
 the best geolocation information available to the system at that point. Any crowdsourced information will have a green background,
-any system guesses (potentially wildly inaccurate) will be shown with a red background. The user can update the geolocation information
+any system guesses (potentially wildly inaccurate) will be shown with a orange background. The user can update the geolocation information
 by providing a geolocatable string (ie. something that can be recognised by a geocoding service as a city) and clicking 'OK'. At that point
 this updated information will be stored in the OpenIPMap database. If a user sees the geolocation guess by the system is wrong, but at the
 same time doesn't know the geolocation of an IP address, the user can submit an empty string, which tells the system to not guess for that IP
@@ -457,19 +457,22 @@ var IpTraceTableView = Backbone.View.extend({
     renderLocForm: function(el) {
         //el.append("<td class='ip-loc trace-table-ip-loc' id='trace-table-ip-loc-{0}'>TEST</td>".format( this.model.get('id') ) );
         var form = $("<form/>");
-        var selected_txt = '';
+        var selected_txt = ''; var display_txt = '';
         var background_color = '#fff';
         var crowd = this.model.get('crowdsourced');
         var guess = this.model.get('suggestions');
         var hostname = this.model.get('hostname');
         if (crowd.length > 0 ) {
             selected_txt = crowd[0]['canonical_georesult'];
+            display_txt = selected_txt;
             background_color = '#2f2';
         } else if ( guess.length > 0 ) {
             selected_txt = guess[0]['name'];
-            background_color = '#f00';
+            /* '?? ' is caught by the geoloc server side */
+            display_txt = '?? ' + selected_txt;
+            background_color = '#fa0';
         }
-        var i=$("<input/>)", {value: selected_txt, text: selected_txt});
+        var i=$("<input/>)", {value: display_txt, text: display_txt});
         i.attr('name','georesult');
         i.css('background-color',background_color);
         var i_span = $("<span class='ui-widget'></span>");
@@ -766,7 +769,8 @@ var PageStateModel = Backbone.Model.extend({
    defaults: {
       'msm_ids': [],
       'show_suggestions': true,
-      'max_probes': undefined
+      'max_probes': undefined,
+      'probe_ids': undefined
    },
    initialize: function() {
       this.on('change', function(model) {
@@ -790,9 +794,11 @@ var PageStateModel = Backbone.Model.extend({
       if (map.hasOwnProperty('show_suggestions')) {
          if ( map['show_suggestions'] == 1 ) {
             this.set('show_suggestions', true);
+            $('#toggle-show-suggestions').attr('checked', true);
          } else {
             //console.log('show_sug', false )
             this.set('show_suggestions', false);
+            $('#toggle-show-suggestions').attr('checked', false);
          }
       }
       // max_probes
@@ -802,6 +808,11 @@ var PageStateModel = Backbone.Model.extend({
          if ( max_probes > 0) {
             this.set('max_probes', max_probes);
          }
+      }
+      // probe_ids
+      if (map.hasOwnProperty('probe_ids')) {
+         // expected to be a list of
+         var probe_ids = map['msm_ids'].split('_');
       }
    },
    rebuild_page_url: function() {
@@ -1535,6 +1546,10 @@ function add_traces() {
     $('#add-trace').on('submit',function(ev) {
         ev.preventDefault();
         var msm_id = $('#add-trace-msm-id').val();
+        var max_probes = $('#set-max-probes').val();
+        if ( max_probes !== undefined ) {
+            PageState.set('max_probes', max_probes ); 
+        }
         add_measurement_to_ui_cb( msm_id );
     });
 }
@@ -1564,10 +1579,14 @@ function show_help_dialog() {
 }
 
 $(document).ready(function() {
+   // boostrap interaction
+   $('#dropdown-menu-advanced').on('click', function(e) { e.stopPropagation(); });
    $('#show_help_dialog').click( show_help_dialog );
    init_catcomplete();
    init_map();
    add_traces();
+   $('#set-max-probes').on('change', function(e) { PageState.set('max_probes', parseInt(e.target.value) ) } );
+   $('#toggle-show-suggestions').on('change', function(e) { PageState.set('show_suggestions', e.target.checked ) } );
 });
 
 
@@ -1601,6 +1620,25 @@ $(document).ready(function() {
         <li><a href="#" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-delay="1000" data-close-others="false">Msms</a>
            <ul class="dropdown-menu" id="dropdown-menu-msms">
            </ul>
+        </li>
+      </ul>
+      <ul class="nav navbar-nav navbar-left dropdown">
+        <!-- needs javascript to make data-toggle not propagate, see 'bootstrap fixes' in $(document).ready in main html -->
+        <li><a href="#" class="dropdown-toggle" data-toggle="dropdown" data-delay="1000" data-close-others="false">Advanced</a>
+          <ul class="dropdown-menu" id="dropdown-menu-advanced" data-toggle="tab">
+              <li class="dropdown-header">These options apply for every new measurement added, not for what is already plotted on map. To reapply these settings to what's already plotted, please reload the page.
+              </li>
+              <li>
+                 <div class="input-group">
+                    <span class="input-group-addon" id="basic-addon1">Max probes</span>
+                    <input type="text" class="form-control" placeholder="(50)" id="set-max-probes">
+                 </div>
+              </li>
+              <li>
+                <div class="input-group">
+                    <span>Show geo-suggestions on map (red circles)</span><input id="toggle-show-suggestions" checked type="checkbox" class="form-control"></div>
+              </li>
+          </ul>
         </li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
