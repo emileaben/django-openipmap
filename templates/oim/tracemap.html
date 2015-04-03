@@ -1103,8 +1103,9 @@ function get_geoconstraints_from_arcane_datastruct( ip, data ) {
    var probe_id = -1;
    var traces = data['ips'][ ip ]['traces']
    for (trace_id in traces) {
-      if ( traces[trace_id]['rtt'] < min_rtt ) {
-         min_rtt = traces[ trace_id ]['rtt']
+      var trace_min_rtt = parseFloat( traces[ trace_id ]['rtt'] );
+      if ( trace_min_rtt < min_rtt ) {
+         min_rtt = trace_min_rtt;
          var trace_id_parts = trace_id.split('|')
          probe_id = trace_id_parts[1];
       }
