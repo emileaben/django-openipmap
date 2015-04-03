@@ -1109,14 +1109,21 @@ function get_geoconstraints_from_arcane_datastruct( ip, data ) {
          probe_id = trace_id_parts[1];
       }
    }
-   var probe_obj = data['prb'][ probe_id ];
-   var lat = probe_obj['lat'];
-   var lon = probe_obj['lon'];
-   return {
-      'probe_id': probe_id,
-      'lat': lat,
-      'lon': lon,
-      'min_rtt': min_rtt
+   if ( probe_id in data['prb'] ) {
+      var probe_obj = data['prb'][ probe_id ];
+      var lat = probe_obj['lat'];
+      var lon = probe_obj['lon'];
+      return {
+         'probe_id': probe_id,
+         'lat': lat,
+         'lon': lon,
+         'min_rtt': min_rtt
+      }
+   } else {
+      return {
+         'err': "probe_id not found",
+         'probe_id': probe_id
+      }
    }
    console.log( ip, probe_id, lat, lon, traces[ trace_id ]['rtt'] );
 /*
