@@ -137,6 +137,13 @@ table,td,th {
 tr.ip_normal {font-size:80%; color: black;}
 tr.ip_rfc1918 {font-size:60%; color: #ccc;}
 
+tr.hop          { padding:1px; text-align:right; }
+tr.ip           { padding:1px; text-align:left; }
+tr.asn          { padding:1px; text-align:right; }
+tr.hostname     { padding:1px; text-align:left; }
+tr.location     { padding:1px; text-align:left; }
+tr.rtts         { padding:1px; text-align:right; }
+
 </style>
 
 <script type="text/template" id="help_dialog_content">
@@ -392,7 +399,7 @@ var TraceView = Backbone.View.extend({
         });
         this.$el.append( '<table>' );
         this.$el.find('table').append(
-            '<th>hop</th><th>IP</th><th>ASN</th><th>hostname</th><th>location</th><th>RTTs</th>'
+            '<th class=“hop">hop</th><th class=“ip">IP</th><th class=“asn">ASN</th><th class=“hostname">hostname</th><th class=“location">location</th><th class=“rtts">RTTs</th>'
         );
         // Render each sub-view and append it to the parent view's element.
         _(this._ipTraceViews).each(function(ipttv) {
@@ -439,19 +446,19 @@ var IpTraceTableView = Backbone.View.extend({
         } else {
             el.addClass('ip_normal');
         }
-        el.append("<td>{0} </td>".format( this._hop_txt ) );
-        el.append("<td>{0}</td>".format( this.model.id ) );
-        el.append("<td title='{0}'>{1}</td>".format( 
+        el.append("<td class='hop'>{0} </td>".format( this._hop_txt ) );
+        el.append("<td class='ip'>{0}</td>".format( this.model.id ) );
+        el.append("<td class='asn' title='{0}'>{1}</td>".format(
             this.model.has('asname') ? ( this.model.get('asname') || '(none)') : '',
-            this.model.has('asn') ? ( this.model.get('asn') || '(none)') : '<img src=/static/scanner.gif width=40>' ) 
+            this.model.has('asn') ? ( this.model.get('asn') || '(none)') : '<img src=/static/scanner.gif width=40>' )
         );
-        el.append("<td>{0}</td>".format( this.model.get('has_meta') ? ( this.model.get('hostname') || '(none)' ) : '<img src=/static/scanner.gif width=40>' ) );
+        el.append("<td class='hostname'>{0}</td>".format( this.model.get('has_meta') ? ( this.model.get('hostname') || '(none)' ) : '<img src=/static/scanner.gif width=40>' ) );
         if ( this.model.get('is_rfc1918') == true ) {
             el.append('<td> </td>');
         } else {
             this.renderLocForm( el );
         }
-        el.append('<td>{0}</td>'.format( this._rtts_txt ));
+        el.append("<td class='rtts'>{0}</td>".format( this._rtts_txt ));
         return this;
     },
     renderLocForm: function(el) {
