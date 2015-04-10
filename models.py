@@ -107,7 +107,7 @@ class Contribution(models.Model):
                 hostnamerule.save()
                 #assume it's an exact hostname
         # do I have to close the file?
-        return ["aaah"];
+        return ["Contribution received"];
 
 class HostnameRule( Contribution ):
     hostname = models.CharField( db_index=True, max_length=256 )
@@ -435,6 +435,7 @@ class IPMeta(models.Model):
                 matches[g.loc.id] = {
                     'loc_id': g.loc.id,
                     'pop': g.loc.pop,
+                    'count': g.loc.count,
                     'name': str( g.loc ),
                     'lat': g.loc.lat,
                     'lon': g.loc.lon,
@@ -465,7 +466,8 @@ class IPMeta(models.Model):
                 sql = "SELECT id FROM openipmap_geoalias WHERE word LIKE '%s'" % ( sql_like_chars )
                 for ga in Geoalias.objects.raw( sql ):
                     add_to_matches( ga, t, True, **kwargs )
-        mk = sorted( matches.keys(), reverse=True, key=lambda x: matches[x]['pop'] )[0:nr_results] ## max 10
+        ## this sorts, first by 'count' (=number of hostnames the DB already has for this location) then by 'population' of location
+        mk = sorted( matches.keys(), reverse=True, key=lambda x: (matches[x]['count'],matches[x]['pop']) )[0:nr_results] ## max 10
         result = []
         for m in mk:
             entry = matches[m]
