@@ -1508,12 +1508,14 @@ function show_ip( data ) {
 function init_map() {
     map = L.map('map');
 
-    var osmUrl='http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
     var osmAttrib='Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors';
 
-    var mapqUrl='http://otile1.mqcdn.com/tiles/1.0.0/map/{z}/{x}/{y}.jpg';
+    // https://github.com/emileaben/django-openipmap/issues/7
+    var mapqUrl = document.location.protocol == 'https:' ?
+            '//otile1-s.mqcdn.com/tiles/1.0.0/map/{z}/{x}/{y}.jpg'
+        :
+            '//otile1.mqcdn.com/tiles/1.0.0/map/{z}/{x}/{y}.jpg';
 
-    //var osm = new L.TileLayer(osmUrl, {attribution: osmAttrib});
     var osm = new L.TileLayer(mapqUrl, {attribution: osmAttrib});
 
     map.setView([20, 0], 3);
