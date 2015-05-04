@@ -365,7 +365,7 @@ class IPMeta(models.Model):
         suggestions = []
         name2loc = self.name2loc(**kwargs)
         if 'dnsloc' in info:
-            if not do_geoloc_constraint or openipmap.geoutils.can_one_travel_distance_in_rtt( lat, lon, info['dnsloc']['lat'], info['dnsloc']['lon'], min_rtt ):
+            if not do_rtt_constraint or openipmap.geoutils.can_one_travel_distance_in_rtt( lat, lon, info['dnsloc']['lat'], info['dnsloc']['lon'], min_rtt ):
                # only add this if this is possible RTTwise
                suggestions.append({
                    'lat': info['dnsloc']['lat'],
