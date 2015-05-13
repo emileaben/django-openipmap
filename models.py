@@ -142,7 +142,7 @@ class HostnameRule( Contribution ):
         returns list of 'max_results' number of results for this particular hostname from the HostnameRule tables
         '''
         results = []
-        hnr=HostnameRule.objects.filter( hostname=hostname )
+        hnr=HostnameRule.objects.filter( hostname__iexact=hostname )
         for rule in hnr:
             results.append({
                 'kind':'hostname',
