@@ -1600,11 +1600,10 @@ function show_trace_meta( data ) {
 }
 
 function add_measurement_to_ui_cb( msm_id ) {
-   var url="https://atlas.ripe.net/api/v1/measurement/{0}/?callback=callback&fields=is_oneoff,msm_id,probes,description,interval,start_time,stop_time".format( msm_id );
+   var url="https://atlas.ripe.net/api/v1/measurement/{0}/?fields=is_oneoff,msm_id,probes,description,interval,start_time,stop_time".format( msm_id );
    $.ajax({
       url: url,
       type: 'GET',
-      jsonp: 'callback',
       dataType: 'jsonp',
       async: true,
       success: show_trace_meta
