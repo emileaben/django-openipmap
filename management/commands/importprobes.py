@@ -11,28 +11,32 @@ ATLAS_URL = 'https://atlas.ripe.net/'
 def parse_probe_json( batch ):
    if not 'objects' in batch: return
    for prb_info in batch['objects']:
-      prb_id = prb_info['id']
-      lat = prb_info['latitude']
-      lon = prb_info['longitude']
-      geo_spec = 'POINT(%s %s)' % ( lon, lat )
-      p,is_created=Probe.objects.get_or_create(
-        id=prb_id,
-        defaults={'lat': lat, 'lon': lon, 'point': geo_spec }
-      )
-      if lat == -78:
-        p.has_incorrect_geoloc = True
-      if not is_created:
-        p.lat = lat
-        p.lon = lon
-        p.point = geo_spec
-      p.save()
+      try:
+        prb_id = prb_info['id']
+        lat = prb_info['latitude']
+        lon = prb_info['longitude']
+        geo_spec = 'POINT(%s %s)' % ( lon, lat )
+        p,is_created=Probe.objects.get_or_create(
+            id=prb_id,
+            defaults={'lat': lat, 'lon': lon, 'point': geo_spec }
+        )
+        if lat == -78:
+            p.has_incorrect_geoloc = True
+        if not is_created:
+            p.lat = lat
+            p.lon = lon
+            p.point = geo_spec
+        p.save()
+      except:
+        print "problem on: %s" % prb_info
 ##      print "XX %s" % ( prb_info )
 
 class Command(BaseCommand):
    args = ''
    help = 'imports probe locs from atlas'
    def handle(self, *args, **options):
-      start_url = '%s/api/v1/probe/?limit=1000' % ( ATLAS_URL )
+      #start_url = '%s/api/v1/probe/?limit=1000' % ( ATLAS_URL )
+      start_url = "https://atlas.ripe.net/api/v1/probe-archive/?format=json"
       req = urllib2.Request( start_url )
       req.add_header("Content-Type", "application/json")
       req.add_header("Accept", "application/json")
