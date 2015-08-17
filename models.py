@@ -107,7 +107,7 @@ class Contribution(models.Model):
                 hostnamerule.save()
                 #assume it's an exact hostname
         # do I have to close the file?
-        return ["aaah"];
+        return ["Contribution received"];
 
 class HostnameRule( Contribution ):
     hostname = models.CharField( db_index=True, max_length=256 )
@@ -142,7 +142,7 @@ class HostnameRule( Contribution ):
         returns list of 'max_results' number of results for this particular hostname from the HostnameRule tables
         '''
         results = []
-        hnr=HostnameRule.objects.filter( hostname=hostname )
+        hnr=HostnameRule.objects.filter( hostname__iexact=hostname )
         for rule in hnr:
             results.append({
                 'kind':'hostname',
@@ -288,7 +288,9 @@ class Geoalias(models.Model):
 
 class IPMeta(models.Model):
     ip = models.GenericIPAddressField( db_index=True )
-    created = models.DateTimeField(auto_now_add=True)
+    created = models.DateTimeField( auto_now_add=True )
+    invalidated = models.DateTimeField( blank=True, null=True, db_index=True )
+    last_updated = models.DateTimeField(auto_now=True)
     dnsloc = models.CharField( max_length=256, blank=True, null=True )
     hostname = models.CharField( max_length=256, blank=True, null=True )
     ##is_anycast = models.NullBooleanField( blank=True, null=True )
@@ -296,6 +298,7 @@ class IPMeta(models.Model):
     psl = PublicSuffixList()
 
     def save(self, **kwargs):
+        ''' IPMeta save method, does lookups if object isn't saved yet '''
         if not self.id:
             ## do dnsloc and hostname lookups
             try:
@@ -313,7 +316,22 @@ class IPMeta(models.Model):
                     pass
         super(self.__class__, self).save(**kwargs)
 
-    def info2json(self):
+    def info2json(self,**kwargs):
+        '''
+        convert all info about this IP into a json structure.
+        optional arguments accepted are
+           'lat': latitude, to georestrict by
+           'lon': longitude, to georestrict by
+           'min_rtt': rtt, to georestrict by
+        '''
+        do_rtt_constraint=False
+        try:
+           lat=kwargs['lat']
+           lon=kwargs['lon']
+           min_rtt=kwargs['min_rtt']
+           do_rtt_constraint=True
+        except: pass
+
         DNSLOC_WEIGHT=0.95
         HOSTNAME_WEIGHT=0.90
         # 0  1  2      3 4 5  7     7
@@ -345,14 +363,16 @@ class IPMeta(models.Model):
         #    info['area'] = json.loads( gc[0].area.geojson )
         ## add a suggestions array that contains the ordered list of suggested lat/lon
         suggestions = []
-        name2loc = self.name2loc()
+        name2loc = self.name2loc(**kwargs)
         if 'dnsloc' in info:
-            suggestions.append({
-                'lat': info['dnsloc']['lat'],
-                'lon': info['dnsloc']['lon'],
-                'reason': 'dnsloc',
-                'weight': DNSLOC_WEIGHT,
-            });
+            if not do_rtt_constraint or openipmap.geoutils.can_one_travel_distance_in_rtt( lat, lon, info['dnsloc']['lat'], info['dnsloc']['lon'], min_rtt ):
+               # only add this if this is possible RTTwise
+               suggestions.append({
+                   'lat': info['dnsloc']['lat'],
+                   'lon': info['dnsloc']['lon'],
+                   'reason': 'dnsloc',
+                   'weight': DNSLOC_WEIGHT,
+               });
         total_pop = 0;
         for n in name2loc:
             total_pop += n['pop']
@@ -369,10 +389,24 @@ class IPMeta(models.Model):
         info['crowdsourced'] = crowdsourced
         return info
 
-    def name2loc(self, poly_geoconstraint=None):
-        '''try to figure out loc, based on name'''
+    def name2loc(self, poly_geoconstraint=None, **kwargs):
+        '''
+           try to figure out loc, based on name
+           optional arguments accepted are
+             'lat': latitude, to georestrict by
+             'lon': longitude, to georestrict by
+             'min_rtt': rtt, to georestrict by
+
+        '''
         ## TODO: add polygon confinement?
         nr_results=10 ## configurable?
+        do_rtt_constraint=False
+        try:
+           lat=kwargs['lat']
+           lon=kwargs['lon']
+           min_rtt=kwargs['min_rtt']
+           do_rtt_constraint=True
+        except: pass
 
         # this should be configurable/tags and/or have low confidence value
         tag_blacklist=set(['rev','cloud','clients','demarc','ebr','pool','bras','core','static','router','net','bgp','pos','out','link','host','infra','ptr','isp','adsl','rdns','tengig','tengige','tge','rtr','shared','red','access','tenge','gin','dsl','cpe'])
@@ -393,11 +427,15 @@ class IPMeta(models.Model):
             tokens = [t for t in tokens if not t in tag_blacklist]
 
         matches = {}
-        def add_to_matches( g, token, is_abbrev ):
+        def add_to_matches( g, token, is_abbrev, **kwargs ):
             if not g.loc.id in matches:
+                ## check if geoconstraints
+                if do_rtt_constraint and not openipmap.geoutils.can_one_travel_distance_in_rtt( lat, lon, g.loc.lat, g.loc.lon, min_rtt ):
+                    return
                 matches[g.loc.id] = {
                     'loc_id': g.loc.id,
                     'pop': g.loc.pop,
+                    'count': g.loc.count,
                     'name': str( g.loc ),
                     'lat': g.loc.lat,
                     'lon': g.loc.lon,
@@ -417,18 +455,19 @@ class IPMeta(models.Model):
 
         for t in tokens:
             for ga in Geoalias.objects.filter(word=t):
-                add_to_matches( ga, t, False )
+                add_to_matches( ga, t, False, **kwargs )
         if len( matches ) == 0:
             #print "little on strict match, trying like"
             for t in tokens:
-                ## 't' can't be anything but a-zA-Z so no SQL injection possible
+                ## 't' can't be anything but a-zA-Z so no SQL injection should be possible
                 sql_like_chars = '%%'.join( list( t ) )
                 sql_like_chars += '%%'
                 # 'a%m%s%'
                 sql = "SELECT id FROM openipmap_geoalias WHERE word LIKE '%s'" % ( sql_like_chars )
                 for ga in Geoalias.objects.raw( sql ):
-                    add_to_matches( ga, t, True )
-        mk = sorted( matches.keys(), reverse=True, key=lambda x: matches[x]['pop'] )[0:nr_results] ## max 10
+                    add_to_matches( ga, t, True, **kwargs )
+        ## this sorts, first by 'count' (=number of hostnames the DB already has for this location) then by 'population' of location
+        mk = sorted( matches.keys(), reverse=True, key=lambda x: (matches[x]['count'],matches[x]['pop']) )[0:nr_results] ## max 10
         result = []
         for m in mk:
             entry = matches[m]

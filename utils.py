@@ -3,12 +3,12 @@ import re
 import ipaddress
 from openipmap.models import Loc,Geoalias,IPMeta,Probe
 import openipmap.geoutils
+import dns.resolver
 
 #import logging
 #logging.basicConfig(filename='/tmp/debug.log',level=logging.DEBUG)
 #LOG=logging.getLogger(__name__)
 
-#import dns.resolver
 
 def asciify( x ):
   if isinstance(x, str):
@@ -29,7 +29,7 @@ def find_ip_info( ip_addr ):
         create_ipmeta( ip_addr )
     return info
 
-def create_ipmeta( ip_addr ):
+def create_ipmeta( ip_addr ): ## not used?
     dnshost = do_dns_host_lookup( ip_addr )
     if dnshost:
         dnsloc = do_dns_loc_lookup( dnshost )
@@ -40,8 +40,13 @@ def create_ipmeta( ip_addr ):
     )
     ipm.save()
 
-def do_dns_loc_lookups( ip_addr ):
+def do_dns_loc_lookup( ip_addr ):
     dnsloc = None
+    try:
+      loc_resolve = dns.resolver.query( ip_addr , 'LOC')
+      dnsloc = str( loc_resolve[0] )
+    except:
+      pass
     return dnsloc
 
 def do_dns_host_lookup( ip_addr ):
@@ -49,10 +54,10 @@ def do_dns_host_lookup( ip_addr ):
     try:
         resolve = dns.resolver.query(dns.reversename.from_address( ip_addr),'PTR')
         dnshost = str(resolve.response.answer[0].items[0])
+        dnshost = dnshost.rstrip('.')
     except:
         pass
     return dnshost
-
 
 ## memoizer for direct_loc_resolve
 class memoize(dict):

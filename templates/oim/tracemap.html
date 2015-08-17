@@ -1,4 +1,5 @@
  <!DOCTYPE html>
+{% load staticfiles %}
 <html>
 <head>
  <meta charset="utf-8">
@@ -28,6 +29,9 @@
  <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
 <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-hover-dropdown/2.0.2/bootstrap-hover-dropdown.js"></script> -->
  <link rel="stylesheet" href="//code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css">
+
+   <!-- svg arrows -->
+   <script src="{% static "leaflet.textpath.js" %}"></script>
 
 <style>
 
@@ -61,7 +65,7 @@ input { margin: 0px;}
 }
 
 .ip-loc-option-guess {
-    background-color: red;
+    background-color: orange;
 }
 
 
@@ -84,7 +88,7 @@ table,td,th {
 }
 
 .name-icon {
-    background: #f00;
+    background: #fa0;
     text-align:center;
     vertical-align:middle;
     border:1px solid #000;
@@ -133,6 +137,27 @@ table,td,th {
 tr.ip_normal {font-size:80%; color: black;}
 tr.ip_rfc1918 {font-size:60%; color: #ccc;}
 
+tr.hop          { padding:1px; text-align:right; }
+tr.ip           { padding:1px; text-align:left; }
+tr.asn          { padding:1px; text-align:right; }
+tr.hostname     { padding:1px; text-align:left; }
+tr.location     { padding:1px; text-align:left; }
+tr.rtts         { padding:1px; text-align:right; }
+
+th.hop          { padding:1px; text-align:right; }
+th.ip           { padding:1px; text-align:left; }
+th.asn          { padding:1px; text-align:right; }
+th.hostname     { padding:1px; text-align:left; }
+th.location     { padding:1px; text-align:left; }
+th.rtts         { padding:1px; text-align:right; }
+
+td.hop          { padding:1px; text-align:right; }
+td.ip           { padding:1px; text-align:left; }
+td.asn          { padding:1px; text-align:right; }
+td.hostname     { padding:1px; text-align:left; }
+td.location     { padding:1px; text-align:left; }
+td.rtts         { padding:1px; text-align:right; }
+
 </style>
 
 <script type="text/template" id="help_dialog_content">
@@ -145,13 +170,13 @@ measurement in RIPE Atlas you can put the traceroute measurement ID into this in
 <p>
 Once you submit a measurement the interface will fetch associated measurement data and will try to geolocate the IP addresses and
 put them on a world map. Sources of traceroutes will be shown in white, locations for which there is crowdsourced information will be 
-shown in green, and locations for which the system makes an educated guess are shown in red (note that these guesses can be wildly inaccurate
+shown in green, and locations for which the system makes an educated guess are shown in orange (note that these guesses can be wildly inaccurate
 at the moment). Nodes in blue are nodes that have DNS LOC records available.
 </p>
 If you click any of the links between geolocated nodes a dialog box will appear that shows the complete traceroute
 that this link is part of. This dialog box will contain normal traceroute information (hop,IP,ASN,hostname,RTTs), and also
 the best geolocation information available to the system at that point. Any crowdsourced information will have a green background,
-any system guesses (potentially wildly inaccurate) will be shown with a red background. The user can update the geolocation information
+any system guesses (potentially wildly inaccurate) will be shown with a orange background. The user can update the geolocation information
 by providing a geolocatable string (ie. something that can be recognised by a geocoding service as a city) and clicking 'OK'. At that point
 this updated information will be stored in the OpenIPMap database. If a user sees the geolocation guess by the system is wrong, but at the
 same time doesn't know the geolocation of an IP address, the user can submit an empty string, which tells the system to not guess for that IP
@@ -245,9 +270,10 @@ if (!String.prototype.format) {
 
 var map;
 var ACTIVE_TRACE=null;
-var MAX_PROBE_COUNT=50;
+var MAX_PROBE_COUNT=51;
 
 // TODO: store 'suggestions' markers as backbonejs things
+// these are the 'suggestion' markers
 var MARKERS_BY_LL={}; //markers keyed by lat/lon
 function markers_by_ll_remove_ip( ll_str, ip ) {
     var marker_info = MARKERS_BY_LL[ ll_str ];
@@ -262,8 +288,22 @@ function markers_by_ll_remove_ip( ll_str, ip ) {
     }
 }
 
+// store probe markers as a backbone collection
+var Probe = Backbone.Model.extend({
+   // Keyed by probe_id
+   defaults: {
+     'lat': null,
+     'lon': null,
+     'marker': null,
+     'traces': [] // traces associated with this probe in 'msm_id|prb_id|ts' format
+   }
+});
+var ProbeCollection = Backbone.Collection.extend({
+   model: Probe,
+});
+var ProbeList = new ProbeCollection();
 
-// store crowd markers as a backbone thing.
+// store markers for crowdsourced locs as a backbone thing.
 var CrMarker = Backbone.Model.extend({
     // Keyed by '<lat>|<lon>'
     defaults: {
@@ -275,10 +315,8 @@ var CrMarker = Backbone.Model.extend({
     remove_ip: function( ip ) {
         // NEEDS TO BE DONE SOMETIME. FOR NOW NOT THAT IMPORTANT
         console.log("TODO Marker.remove_ip() to be implemented");
-        console.log( "pre", this.get('ips') );
         var ips = this.get('ips');
         this.set('ips', _.without(ips, ip));
-        console.log( "post", this.get('ips') );
         if ( ips.length < 1 ) {
             var marker = this.get('marker');
             map.removeLayer( marker );
@@ -375,7 +413,7 @@ var TraceView = Backbone.View.extend({
         });
         this.$el.append( '<table>' );
         this.$el.find('table').append(
-            '<th>hop</th><th>IP</th><th>ASN</th><th>hostname</th><th>location</th><th>RTTs</th>'
+            '<th class=“hop">hop</th><th class=“ip">IP</th><th class=“asn">ASN</th><th class=“hostname">hostname</th><th class=“location">location</th><th class=“rtts">RTTs</th>'
         );
         // Render each sub-view and append it to the parent view's element.
         _(this._ipTraceViews).each(function(ipttv) {
@@ -422,37 +460,40 @@ var IpTraceTableView = Backbone.View.extend({
         } else {
             el.addClass('ip_normal');
         }
-        el.append("<td>{0} </td>".format( this._hop_txt ) );
-        el.append("<td>{0}</td>".format( this.model.id ) );
-        el.append("<td title='{0}'>{1}</td>".format( 
+        el.append("<td class='hop'>{0} </td>".format( this._hop_txt ) );
+        el.append("<td class='ip'>{0}</td>".format( this.model.id ) );
+        el.append("<td class='asn' title='{0}'>{1}</td>".format(
             this.model.has('asname') ? ( this.model.get('asname') || '(none)') : '',
-            this.model.has('asn') ? ( this.model.get('asn') || '(none)') : '<img src=/static/scanner.gif width=40>' ) 
+            this.model.has('asn') ? ( this.model.get('asn') || '(none)') : '<img src=/static/scanner.gif width=40>' )
         );
-        el.append("<td>{0}</td>".format( this.model.get('has_meta') ? ( this.model.get('hostname') || '(none)' ) : '<img src=/static/scanner.gif width=40>' ) );
+        el.append("<td class='hostname'>{0}</td>".format( this.model.get('has_meta') ? ( this.model.get('hostname') || '(none)' ) : '<img src=/static/scanner.gif width=40>' ) );
         if ( this.model.get('is_rfc1918') == true ) {
             el.append('<td> </td>');
         } else {
             this.renderLocForm( el );
         }
-        el.append('<td>{0}</td>'.format( this._rtts_txt ));
+        el.append("<td class='rtts'>{0}</td>".format( this._rtts_txt ));
         return this;
     },
     renderLocForm: function(el) {
         //el.append("<td class='ip-loc trace-table-ip-loc' id='trace-table-ip-loc-{0}'>TEST</td>".format( this.model.get('id') ) );
         var form = $("<form/>");
-        var selected_txt = '';
+        var selected_txt = ''; var display_txt = '';
         var background_color = '#fff';
         var crowd = this.model.get('crowdsourced');
         var guess = this.model.get('suggestions');
         var hostname = this.model.get('hostname');
         if (crowd.length > 0 ) {
             selected_txt = crowd[0]['canonical_georesult'];
+            display_txt = selected_txt;
             background_color = '#2f2';
         } else if ( guess.length > 0 ) {
             selected_txt = guess[0]['name'];
-            background_color = '#f00';
+            /* '?? ' is caught by the geoloc server side */
+            display_txt = '?? ' + selected_txt;
+            background_color = '#fa0';
         }
-        var i=$("<input/>)", {value: selected_txt, text: selected_txt});
+        var i=$("<input/>)", {value: display_txt, text: display_txt});
         i.attr('name','georesult');
         i.css('background-color',background_color);
         var i_span = $("<span class='ui-widget'></span>");
@@ -628,6 +669,8 @@ var IpListCollection = Backbone.Collection.extend({
 });
 var IpList = new IpListCollection();
 
+
+
 function popup_for_ll( ll_str ) {
     var marker_info = MARKERS_BY_LL[ll_str];
     var ips = marker_info['ips'];
@@ -687,9 +730,7 @@ var Trace = Backbone.Model.extend({
                 var ip_obj = IpList.get( ip );
                 var traces = ip_obj.get('traces');
                 if ( _.keys( traces ).length == 0 ) {
-                    console.log( "PRE", IpList.length );
                     IpList.remove( ip );
-                    console.log( "POST", IpList.length );
                 }
             }
         }
@@ -731,44 +772,6 @@ var Trace = Backbone.Model.extend({
             trace_view = new TraceView({ model: this });
             trace_view.render();
         }
-/*
-        var hops = _.keys( trace_obj );
-        var elt_id = "trace-table-{0}-{1}-{2}".format( trace_id_parts[0], trace_id_parts[1], trace_id_parts[2] );
-        var root_id = "dialog-{0}-{1}-{2}".format( trace_id_parts[0], trace_id_parts[1], trace_id_parts[2] );
-
-        var root_elt = $('#{0}'.format(root_id) )
-        if ( root_elt.length == 0 ) { 
-            root_elt = $('<div id="{0}" title="msm:{1} prb:{2} ts:{3}"></div>'.format( root_id, trace_id_parts[0], trace_id_parts[1], ts2iso( trace_id_parts[2] )  ) );
-        }
-        root_elt.data('trace_obj', trace_obj);
-
-        var trace_table = $('#{0}'.format(elt_id));
-        if ( trace_table.length == 0 ) {
-            max_hop = _.max( _.map(hops, function(x){ return parseInt(x); }) );
-            var txt = _.template( $('#trace-table-template').html(),
-                { 'trace_obj': trace_obj,
-                'id': trace_id,
-                'elt_id': elt_id,
-                'hops': hops,
-                'max_hop': max_hop
-                }
-            );
-            root_elt.html( txt );
-            root_elt.dialog();
-        }
-        // now it's bound we can define events on 'txt'
-        $('.trace-table-ip-host').each(function(idx,elt) {
-            insert_ip_hostname( elt );
-        });
-        $('.trace-table-ip-loc').each(function(idx,elt) {
-            insert_ip_loc_form( elt );
-        });
-        var table_width=$( '#{0}'.format(elt_id) ).outerWidth();
-        root_elt.dialog("option", "width", table_width+5 );
-        root_elt.on( "dialogclose", function( ev, ui ) {
-            ev.target.remove();
-        });
-*/
     },
 });
 var TraceListCollection = Backbone.Collection.extend({
@@ -781,6 +784,71 @@ var TraceListCollection = Backbone.Collection.extend({
     }
 });
 var TraceList = new TraceListCollection();
+
+// set state for the page here
+var PageStateModel = Backbone.Model.extend({
+   defaults: {
+      'msm_ids': [],
+      'show_suggestions': true,
+      'max_probes': undefined,
+      'probe_ids': undefined
+   },
+   initialize: function() {
+      this.on('change', function(model) {
+         this.rebuild_page_url();
+      });
+   },
+   state_from_page_url: function() {
+      var map = {};
+      window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi, function (m, key, value) {
+          map[key] = value;
+      });
+      // msm_ids
+      if (map.hasOwnProperty('msm_ids')) { 
+         msm_ids = map['msm_ids'].split('_');
+           _.each(msm_ids, function(msm_id) {
+               add_measurement_to_ui_cb( msm_id );
+         });
+      }
+      // show_suggestions
+      // TODO: have this option reflect in UI, not just query parameters
+      if (map.hasOwnProperty('show_suggestions')) {
+         if ( map['show_suggestions'] == 1 ) {
+            this.set('show_suggestions', true);
+            $('#toggle-show-suggestions').attr('checked', true);
+         } else {
+            //console.log('show_sug', false )
+            this.set('show_suggestions', false);
+            $('#toggle-show-suggestions').attr('checked', false);
+         }
+      }
+      // max_probes
+      // if max_probes is set, don't show warning messages anymore, just select this no. from a measurement
+      if (map.hasOwnProperty('max_probes')) {
+         var max_probes = parseInt( map['max_probes'] );
+         if ( max_probes > 0) {
+            this.set('max_probes', max_probes);
+         }
+      }
+      // probe_ids
+      if (map.hasOwnProperty('probe_ids')) {
+         // expected to be a list of
+         var probe_ids = map['msm_ids'].split('_');
+      }
+   },
+   rebuild_page_url: function() {
+      var max_probes = this.get('max_probes');
+      var params = {};
+      params['msm_ids'] = this.get('msm_ids').join('_');
+      params['show_suggestions'] = this.get('show_suggestions') ? '1' : '0';
+      if ( max_probes !== undefined ) { params['max_probes'] = max_probes }
+      var query_string = jQuery.param( params );
+      new_url = window.location.href.split(/[\?\#]/)[0] + '?' + query_string;
+      window.history.pushState(query_string, document.title, new_url);
+   }
+});
+var PageState = new PageStateModel();
+
 
 prbs={};
 var nameIcon = L.divIcon({className: 'name-icon'});
@@ -1051,8 +1119,52 @@ function decorate_hostname_for_ip( ip ) {
     return html;
 }
 
+function get_geoconstraints_from_arcane_datastruct( ip, data ) {
+   var min_rtt = 1000;
+   var probe_id = -1;
+   var traces = data['ips'][ ip ]['traces']
+   for (trace_id in traces) {
+      var trace_min_rtt = parseFloat( traces[ trace_id ]['rtt'] );
+      if ( trace_min_rtt < min_rtt ) {
+         min_rtt = trace_min_rtt;
+         var trace_id_parts = trace_id.split('|')
+         probe_id = trace_id_parts[1];
+      }
+   }
+   if ( probe_id in data['prb'] ) {
+      var probe_obj = data['prb'][ probe_id ];
+      var lat = probe_obj['lat'];
+      var lon = probe_obj['lon'];
+      return {
+         'probe_id': probe_id,
+         'lat': lat,
+         'lon': lon,
+         'min_rtt': min_rtt
+      }
+   } else {
+      return {
+         'err': "probe_id not found",
+         'probe_id': probe_id
+      }
+   }
+   console.log( ip, probe_id, lat, lon, traces[ trace_id ]['rtt'] );
+/*
+return lat/lon/min_rtt from this type of data:
+"ips": {
+    "69.31.34.182": {
+      "traces": {
+        "1664415|10039|1399362974": {
+          "rtt": "17.4", 
+          "hop": 9
+        }
+      }
+    }, 
+*/
+}
 
 function show_traces( data ) {
+    // add to page state
+    PageState.set('msm_ids', PageState.get('msm_ids').concat( this.msm_id ));
     var desc = $( "<li><a href='#'>{0} <b>{1}</b> {2}prbs {3}-{4}</a></li>".format(
         this.msm_id,
         this.msm_desc,
@@ -1062,7 +1174,43 @@ function show_traces( data ) {
     ) );
     this.dmm.append( desc );
     this.dmm.show();
-    // add to TraceList
+    // add probes
+    for (p_idx in data['prb']) {
+        var probe_id = parseInt( p_idx );
+        var prb_obj = data['prb'][ p_idx ];
+        var probeX = ProbeList.get( probe_id ); 
+        if ( probeX === undefined ) {
+            var lat = prb_obj['lat'];
+            var lon = prb_obj['lon'];
+            var prb_mark=L.marker([lat,lon],{icon: prbIcon}).addTo(map);
+            ProbeList.add({
+               'id': probe_id,
+               'lat': lat,
+               'lon': lon,
+               'marker': prb_mark,
+               'traces': []
+            });
+            // hmm, need to stash the prb_id in the marker object ...
+            // must be a better way. 
+            prb_mark.____prb_id = probe_id;
+            var probeY = ProbeList.get( probe_id );
+            prb_mark.on('click',function(evt) {
+               // on multiple traces per probe this will pop them all up
+               // may be nicer to give people an option to pick one if there is > 1
+               var this_probe = ProbeList.get( this.____prb_id );
+               var traces = this_probe.get('traces');
+               for (t_idx in traces ) {
+                  var trace_id = traces[t_idx];
+                  TraceList.unhighlite_all();
+                  var t = TraceList.get( trace_id );
+                  t.set('is_active',true);
+                  t.highlite();
+                  t.showAsText( $('#trace_info') );
+               }
+            });
+        }
+    }
+    // add traces to TraceList , and associate with probes
     for (trace_id in data['trs']) {
         // trace_obj = data['trs'][trace_id]['trace'];
         trace_obj = data['trs'][trace_id];
@@ -1073,13 +1221,15 @@ function show_traces( data ) {
         if ( _.has(data,'dst_name') && _.has( data['dst_name'], trace_id ) ) {
             this_trace.set('dst_name', data['dst_name'][trace_id] );
         }
-    }
-    for (p_idx in data['prb']) {
-        var p = data['prb'][ p_idx ];
-        var lat = p['lat'];
-        var lon = p['lon'];
-        var mark=L.marker([lat,lon],{icon: prbIcon}).addTo(map);
-        // code to show traces per probe
+        // traceid contains <msmid>|prbid|ts tupples
+        var trace_id_parts = trace_id.split('|')
+        var probe_id = parseInt(trace_id_parts[1]);
+        var probe = ProbeList.get( probe_id );
+        if ( probe !== undefined ) {
+            var trace_list = probe.get('traces');
+            trace_list.push( trace_id );
+            probe.set('traces', trace_list);
+        }
     }
     // traces = data['trs'];
     // ips = data['ips'];
@@ -1099,8 +1249,14 @@ function show_traces( data ) {
                 continue;
             }
             // #TODO get geoconstraints from the measurement itself
+            geo_c = get_geoconstraints_from_arcane_datastruct( ip, data );
             // #TODO do this in waves (hop1 first?)
-            ip_url = 'ipmeta.json?ip=' + ip;
+            //OLD ip_url = 'ipmeta.json?ip=' + ip;
+            // ip_url = 'iprtt?q=' + ip + '|37.966667|23.716667|10'; // TEST only show 10 ms from Athens
+            var ip_url = 'iprtt?q=' + ip + '|0|0|1000'; // default
+            if ('lat' in geo_c && 'lon' in geo_c && 'min_rtt' in geo_c ) {
+               ip_url = 'iprtt?q=' + [ ip , geo_c['lat'], geo_c['lon'], geo_c['min_rtt'] ].join('|'); 
+            }
             $.ajax({
                 url: ip_url,
                 type: 'GET',
@@ -1201,6 +1357,11 @@ function redraw_trace( trace_id ) {
                             pl_options['dashArray'] = "4, 8";
                         }
                         var pl = new L.Polyline([p1,p2], pl_options).addTo(map);
+                        pl.setText(' \u25BA ',
+                             { end: true,
+                               offset: 4
+                             }
+                        );
                         t.get('ui_segments').push( pl );
                         pl.on('mouseover', function(evt) {
                             var t = TraceList.get( trace_id );
@@ -1303,7 +1464,9 @@ function show_ip( data ) {
         ip_obj.set('lat',lat);
         ip_obj.set('lon',lon);
         mark=create_marker_icon(lat,lon,ip_obj,dnslocIcon);
-    } else if ( data['suggestions'] instanceof Array && data['suggestions'].length > 0 ) {
+    } else if ( data['suggestions'] instanceof Array 
+             && data['suggestions'].length > 0 
+             && PageState.get('show_suggestions') ) {
         entry = data['suggestions'][0]; // take the first by default
         lat = entry['lat'];
         lon = entry['lon'];
@@ -1345,15 +1508,17 @@ function show_ip( data ) {
 function init_map() {
     map = L.map('map');
 
-    var osmUrl='http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
     var osmAttrib='Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors';
 
-    var mapqUrl='http://otile1.mqcdn.com/tiles/1.0.0/map/{z}/{x}/{y}.jpg';
+    // https://github.com/emileaben/django-openipmap/issues/7
+    var mapqUrl = document.location.protocol == 'https:' ?
+            '//otile1-s.mqcdn.com/tiles/1.0.0/map/{z}/{x}/{y}.jpg'
+        :
+            '//otile1.mqcdn.com/tiles/1.0.0/map/{z}/{x}/{y}.jpg';
 
-    //var osm = new L.TileLayer(osmUrl, {attribution: osmAttrib});
     var osm = new L.TileLayer(mapqUrl, {attribution: osmAttrib});
 
-    map.setView([51.505, -0.09], 2);
+    map.setView([20, 0], 3);
     map.addLayer(osm);
 }
 
@@ -1379,12 +1544,15 @@ function show_trace_meta( data ) {
     var dmm = $('#dropdown-menu-msms');
     var probe_cnt = data['probes'].length;
     var probes_q = '';
-    if ( probe_cnt > MAX_PROBE_COUNT ) {
-        var alert_msg = "probe count too high for viz ({0}), only fetching data for {1} (picked randomly)".format( probe_cnt, MAX_PROBE_COUNT );
-        alert( alert_msg );
+    var max_probes = PageState.get('max_probes') || MAX_PROBE_COUNT;
+    if ( probe_cnt > max_probes ) {
+        if (PageState.get('max_probes') === undefined) {
+           var alert_msg = "probe count too high for viz ({0}), only fetching data for {1} (picked randomly)\nThis may take a while ....".format( probe_cnt, MAX_PROBE_COUNT );
+           alert( alert_msg );
+        } 
         var prb_list = [];
         data['probes'] = shuffle( data['probes'] );
-        for (var idx=0; idx< MAX_PROBE_COUNT; idx++) {
+        for (var idx=0; idx< max_probes; idx++) {
             prb_list.push( data['probes'][idx]['id'] );
         }
         probes_q = '&probes=' + prb_list.join(',');
@@ -1431,19 +1599,30 @@ function show_trace_meta( data ) {
     });
 }
 
-function add_trace_js() {
+function add_measurement_to_ui_cb( msm_id ) {
+   var url="https://atlas.ripe.net/api/v1/measurement/{0}/?callback=callback&fields=is_oneoff,msm_id,probes,description,interval,start_time,stop_time".format( msm_id );
+   $.ajax({
+      url: url,
+      type: 'GET',
+      jsonp: 'callback',
+      dataType: 'jsonp',
+      async: true,
+      success: show_trace_meta
+   });
+}
+
+function add_traces() {
+    // add traces and other state from URL / permalink
+    PageState.state_from_page_url();
+    // add traces when user submits
     $('#add-trace').on('submit',function(ev) {
         ev.preventDefault();
         var msm_id = $('#add-trace-msm-id').val();
-        var url="https://atlas.ripe.net/api/v1/measurement/{0}/?callback=callback&fields=is_oneoff,msm_id,probes,description,interval,start_time,stop_time".format( msm_id );
-        $.ajax({
-            url: url,
-            type: 'GET',
-            jsonp: 'callback',
-            dataType: 'jsonp',
-            async: true,
-            success: show_trace_meta
-        });
+        var max_probes = $('#set-max-probes').val();
+        if ( max_probes !== undefined ) {
+            PageState.set('max_probes', max_probes ); 
+        }
+        add_measurement_to_ui_cb( msm_id );
     });
 }
 
@@ -1472,10 +1651,14 @@ function show_help_dialog() {
 }
 
 $(document).ready(function() {
+   // boostrap interaction
+   $('#dropdown-menu-advanced').on('click', function(e) { e.stopPropagation(); });
    $('#show_help_dialog').click( show_help_dialog );
    init_catcomplete();
    init_map();
-   add_trace_js();
+   add_traces();
+   $('#set-max-probes').on('change', function(e) { PageState.set('max_probes', parseInt(e.target.value) ) } );
+   $('#toggle-show-suggestions').on('change', function(e) { PageState.set('show_suggestions', e.target.checked ) } );
 });
 
 
@@ -1506,9 +1689,28 @@ $(document).ready(function() {
         <button type="submit" class="btn btn-default">Add msm</button>
       </form>
       <ul class="nav navbar-nav navbar-left dropdown">
-        <li><a href="#" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-delay="1000" data-close-others="false">Msm</a>
+        <li><a href="#" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-delay="1000" data-close-others="false">Msms</a>
            <ul class="dropdown-menu" id="dropdown-menu-msms">
            </ul>
+        </li>
+      </ul>
+      <ul class="nav navbar-nav navbar-left dropdown">
+        <!-- needs javascript to make data-toggle not propagate, see 'bootstrap fixes' in $(document).ready in main html -->
+        <li><a href="#" class="dropdown-toggle" data-toggle="dropdown" data-delay="1000" data-close-others="false">Advanced</a>
+          <ul class="dropdown-menu" id="dropdown-menu-advanced" data-toggle="tab">
+              <li class="dropdown-header">These options apply for every new measurement added, not for what is already plotted on map. To reapply these settings to what's already plotted, please reload the page.
+              </li>
+              <li>
+                 <div class="input-group">
+                    <span class="input-group-addon" id="basic-addon1">Max probes</span>
+                    <input type="text" class="form-control" placeholder="(50)" id="set-max-probes">
+                 </div>
+              </li>
+              <li>
+                <div class="input-group">
+                    <span>Show geo-suggestions on map (red circles)</span><input id="toggle-show-suggestions" checked type="checkbox" class="form-control"></div>
+              </li>
+          </ul>
         </li>
       </ul>
       <ul class="nav navbar-nav navbar-right">

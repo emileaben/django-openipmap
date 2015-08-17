@@ -118,6 +118,17 @@ def msmfetch(request):
     except:
         return HttpResponse("no msm_id")
 
+    ## get msm_info   
+    ##### not used yet, but msm_info could be used to work on start/stop/interval/probes etc.
+    #msm_info_url = "https://atlas.ripe.net/api/v1/measurement/%s/?format=json" % ( msm_id )
+    #try:
+    #    info_fh = urllib.urlopen( msm_info_url )
+    #except Exception as err:
+    #    return HttpResponse(status=err[1])
+    #info_json = info_fh.read()
+    #msm_info = json.loads( info_json )
+    ### here
+
     limit=4
     try: limit = int(request.GET.get('limit'))
     except: pass
@@ -131,21 +142,29 @@ def msmfetch(request):
     except: pass
 
     probes=''
-    try: probes = request.GET.get('probes')
+    try: 
+      probes = request.GET.get('probes')
     except: pass
+
+    
 
     start = stop - interval
     #msm_url = "https://atlas.ripe.net/api/v1/measurement/%d/result/?start=%d&stop=%d&format=txt&limit=%d" % ( int(msm_id), start_t, end_t, limit )
     ### limit doesn't work?
     ####TODO use latest? https://atlas.ripe.net/api/v1/measurement-latest/1636208/
-    msm_url = "https://atlas.ripe.net/api/v1/measurement/%d/result/?start=%d&stop=%d&limit=%d" % ( msm_id, start, stop, limit )
+    #OLD# msm_url = "https://atlas.ripe.net/api/v1/measurement/%d/result/?start=%d&stop=%d&limit=%d" % ( msm_id, start, stop, limit )
+    version_count = 1
+    msm_url = "https://atlas.ripe.net/api/v1/measurement-latest/%s/?versions=%s" % ( msm_id, version_count )
     if probes:
-        msm_url += "&prb_id=%s" % ( probes )
+        msm_url += "&probes=%s" % ( probes )
     try:
         url_fh = urllib.urlopen( msm_url )
     except Exception as err:
         # err[1] will have the HTTP status code
-        return HttpResponse(status=err[1])
+        if isinstance( err[1], int):
+           return HttpResponse(status=err[1])
+        else:
+           return HttpResponse(status=500)
     msm_json = url_fh.read()
     data = json.loads(msm_json)
     d = {
@@ -157,10 +176,11 @@ def msmfetch(request):
         'err': []
     } # data struct
     d['msm_url'] = msm_url
-    for msm in data:
+    for key,msm_list in data.items():
         try:
+            msm = msm_list[0]
             ts = msm['timestamp']
-            prb_id = int(msm['prb_id'])
+            prb_id = int(key)
             if not prb_id in d['prb']:
                 try:
                     p = Probe.objects.get(id=prb_id)
@@ -217,6 +237,31 @@ def msmfetch(request):
         content_type="application/json"
     )
 
+def iprtt(request):
+    '''
+     accepts tuples of q=<ip>|<lat>|<lon>|<min_rtt>
+     returns same as ipmeta, but now with geoconstraints applied
+    '''
+    ## TODO nicer API for this, merge with ipmeta api?
+    try: 
+        iplatlonrtt = request.GET.get('q')
+        ip,lat,lon,min_rtt = iplatlonrtt.split('|')
+        # normalise
+        ip = str( ipaddress.ip_address( ip ) )
+        lat = float( lat )
+        lon = float( lon )
+        min_rtt = float( min_rtt )
+        if min_rtt <= 0:
+           raise ValueError("min_rtt needs to be > 0")
+    except: return HttpResponse("need q query parameter and ip|lat|lon|min_rtt separated by '|', rtt > 0")
+    # lookup
+    ipm,is_created = IPMeta.objects.get_or_create(ip=ip,invalidated=None)
+    info = ipm.info2json(lat=lat,lon=lon,min_rtt=min_rtt)
+    return HttpResponse(
+        json.dumps(info, indent=2),
+        content_type="application/json"
+    )
+
 def ipmeta(request):
     ## find all related info for a list of IP addresses
     # returns a dictionary with the associated info
@@ -226,7 +271,7 @@ def ipmeta(request):
     ## normalize
     ip_addr = str( ipaddress.ip_address( ip_addr ) )
     ## lookup
-    ipm,is_created = IPMeta.objects.get_or_create(ip=ip_addr)
+    ipm,is_created = IPMeta.objects.get_or_create(ip=ip_addr,invalidated=None)
     info = ipm.info2json()
     return HttpResponse(
         json.dumps(info, indent=2),
@@ -246,9 +291,7 @@ def ipmap(request):
 
 @login_required
 def tracemap(request,**kwargs):
-    template='tracemap.html'
-    if 'is_test' in kwargs:
-        template='tracemap-test.html'
+    template='oim/tracemap.html'
     #try: msm_id = int(request.GET.get('msm_id'))
     #except:
     #    ##TODO page with suggestions for msm_ids
