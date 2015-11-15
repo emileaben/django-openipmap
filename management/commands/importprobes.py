@@ -15,6 +15,7 @@ def parse_probe_json( batch ):
         prb_id = prb_info['id']
         lat = prb_info['latitude']
         lon = prb_info['longitude']
+        print "%s %s %s" % ( prb_id, lat, lon )
         geo_spec = 'POINT(%s %s)' % ( lon, lat )
         p,is_created=Probe.objects.get_or_create(
             id=prb_id,
@@ -38,8 +39,8 @@ class Command(BaseCommand):
       #start_url = '%s/api/v1/probe/?limit=1000' % ( ATLAS_URL )
       start_url = "https://atlas.ripe.net/api/v1/probe-archive/?format=json"
       req = urllib2.Request( start_url )
-      req.add_header("Content-Type", "application/json")
-      req.add_header("Accept", "application/json")
+      #req.add_header("Content-Type", "application/json")
+      #req.add_header("Accept", "application/json")
       conn = urllib2.urlopen(req)
       probe_data_batch = simplejson.load(conn)
       parse_probe_json( probe_data_batch )
@@ -49,8 +50,8 @@ class Command(BaseCommand):
          if probe_data_batch['meta']['next'] is None: break
          next_url = "%s%s" % ( ATLAS_URL , probe_data_batch['meta']['next'])
          next_req = urllib2.Request( next_url )
-         next_req.add_header("Content-Type", "application/json")
-         next_req.add_header("Accept", "application/json")
+         #next_req.add_header("Content-Type", "application/json")
+         #next_req.add_header("Accept", "application/json")
          next_conn = urllib2.urlopen(next_req)
          probe_data_batch = simplejson.load( next_conn )
          parse_probe_json( probe_data_batch )
