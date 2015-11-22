@@ -15,7 +15,6 @@ def parse_probe_json( batch ):
         prb_id = prb_info['id']
         lat = prb_info['latitude']
         lon = prb_info['longitude']
-        print "%s %s %s" % ( prb_id, lat, lon )
         geo_spec = 'POINT(%s %s)' % ( lon, lat )
         p,is_created=Probe.objects.get_or_create(
             id=prb_id,
